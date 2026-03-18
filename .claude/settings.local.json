@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/project/claude/html-web-editor -name *)"
+    ]
+  }
+}
