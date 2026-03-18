@@ -11,6 +11,8 @@ export default function HtmlPreview() {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Flag to prevent re-injection when we receive DOM_UPDATED from iframe
   const suppressNextUpdate = useRef(false);
+  // Debounce timer for DOM_UPDATED history pushes
+  const domUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Inject bridge script into HTML before </body> or at end */
   const injectBridge = useCallback((html: string): string => {
@@ -63,8 +65,15 @@ export default function HtmlPreview() {
       }
 
       if (msg.type === 'DOM_UPDATED' && msg.payload?.html) {
-        suppressNextUpdate.current = true;
-        setHtmlContent(msg.payload.html, '요소 편집');
+        // Debounce history pushes so slider dragging doesn't flood undo stack
+        if (domUpdateTimerRef.current) {
+          clearTimeout(domUpdateTimerRef.current);
+        }
+        domUpdateTimerRef.current = setTimeout(() => {
+          suppressNextUpdate.current = true;
+          setHtmlContent(msg.payload.html, '요소 편집');
+          domUpdateTimerRef.current = null;
+        }, 300);
       }
 
       if (msg.type === 'TEXT_CHANGED' && msg.payload) {
@@ -73,7 +82,12 @@ export default function HtmlPreview() {
     }
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (domUpdateTimerRef.current) {
+        clearTimeout(domUpdateTimerRef.current);
+      }
+    };
   }, [setSelectedElement, setHtmlContent]);
 
   if (!blobUrl) {
