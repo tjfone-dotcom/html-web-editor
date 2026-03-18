@@ -12,6 +12,8 @@ interface SpacingControlProps {
   onChange: (values: SpacingValues) => void;
   label: string;
   unit?: string;
+  min?: number;
+  max?: number;
 }
 
 const sides = ['top', 'right', 'bottom', 'left'] as const;
@@ -22,7 +24,7 @@ const sideLabels: Record<string, string> = {
   left: '좌',
 };
 
-export default function SpacingControl({ values, onChange, label, unit = 'px' }: SpacingControlProps) {
+export default function SpacingControl({ values, onChange, label, unit = 'px', min = 0, max = 100 }: SpacingControlProps) {
   const [linked, setLinked] = useState(false);
 
   const handleChange = (side: keyof SpacingValues, val: number) => {
@@ -57,12 +59,12 @@ export default function SpacingControl({ values, onChange, label, unit = 'px' }:
             <div className="flex items-center">
               <input
                 type="number"
-                min={0}
-                max={200}
+                min={min}
+                max={max}
                 value={values[side]}
                 onChange={(e) => {
                   const v = parseInt(e.target.value) || 0;
-                  handleChange(side, Math.max(0, v));
+                  handleChange(side, Math.max(min, Math.min(max, v)));
                 }}
                 className="w-full bg-gray-800 text-xs text-gray-300 border border-gray-600 rounded px-1 py-1 text-center"
               />

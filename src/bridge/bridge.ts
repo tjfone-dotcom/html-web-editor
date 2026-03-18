@@ -244,6 +244,19 @@ export function getBridgeScript(): string {
       }
     }
 
+    if (msg.type === 'UPDATE_ATTRIBUTE' && msg.payload) {
+      var el = document.querySelector('[data-editor-id="' + msg.payload.editorId + '"]');
+      if (el && msg.payload.attributes) {
+        var attrs = msg.payload.attributes;
+        for (var attr in attrs) {
+          if (attrs.hasOwnProperty(attr)) {
+            el.setAttribute(attr, attrs[attr]);
+          }
+        }
+        sendDOMUpdate();
+      }
+    }
+
     if (msg.type === 'UPDATE_TEXT' && msg.payload) {
       var el = document.querySelector('[data-editor-id="' + msg.payload.editorId + '"]');
       if (el) {

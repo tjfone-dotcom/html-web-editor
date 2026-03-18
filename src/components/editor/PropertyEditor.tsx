@@ -1,6 +1,9 @@
 import { useEditorStore } from '../../store/editorStore';
 import TextProperties from './properties/TextProperties';
 import BoxProperties from './properties/BoxProperties';
+import ButtonProperties from './properties/ButtonProperties';
+import ImageProperties from './properties/ImageProperties';
+import LineProperties from './properties/LineProperties';
 
 export default function PropertyEditor() {
   const selectedElement = useEditorStore((s) => s.selectedElement);
@@ -22,18 +25,15 @@ export default function PropertyEditor() {
   const renderProperties = () => {
     switch (elementType) {
       case 'text':
-      case 'button':
         return <TextProperties />;
+      case 'button':
+        return <ButtonProperties />;
       case 'box':
         return <BoxProperties />;
       case 'image':
+        return <ImageProperties />;
       case 'line':
-        // These will be implemented in a future phase
-        return (
-          <p className="text-xs text-gray-500 px-4">
-            이 요소 유형의 속성 편집은 추후 지원됩니다.
-          </p>
-        );
+        return <LineProperties />;
       case 'unsupported':
         return (
           <p className="text-xs text-gray-500 px-4">
