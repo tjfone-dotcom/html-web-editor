@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
+import { downloadHtml } from '../utils/htmlSerializer';
 
 /**
  * Global keyboard shortcuts for the editor.
@@ -45,10 +46,13 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Ctrl+S: save (prevent default, log for now)
+      // Ctrl+S: save HTML file
       if (isCtrl && e.key === 's') {
         e.preventDefault();
-        console.log('[useKeyboardShortcuts] Ctrl+S pressed — save will be implemented in Phase 8');
+        const { htmlContent, fileName } = useEditorStore.getState();
+        if (htmlContent) {
+          downloadHtml(htmlContent, fileName ?? 'untitled.html');
+        }
         return;
       }
     }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type SyntheticEvent } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { getBridgeScript } from '../../bridge/bridge';
 
@@ -7,6 +7,7 @@ export default function HtmlPreview() {
   const setSelectedElement = useEditorStore((s) => s.setSelectedElement);
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [isIframeLoading, setIsIframeLoading] = useState(false);
   const prevBlobUrlRef = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Flag to prevent re-injection when we receive DOM_UPDATED from iframe
@@ -40,6 +41,7 @@ export default function HtmlPreview() {
       const injected = injectBridge(htmlContent);
       const blob = new Blob([injected], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
+      setIsIframeLoading(true);
       setBlobUrl(url);
       prevBlobUrlRef.current = url;
     } else {
@@ -96,8 +98,20 @@ export default function HtmlPreview() {
     return null;
   }
 
+  const handleIframeLoad = useCallback((_e: SyntheticEvent<HTMLIFrameElement>) => {
+    setIsIframeLoading(false);
+  }, []);
+
   return (
-    <div className="w-full h-full flex items-center justify-center p-4">
+    <div className="w-full h-full flex items-center justify-center p-4 relative">
+      {isIframeLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs text-gray-500">로딩 중...</span>
+          </div>
+        </div>
+      )}
       <div
         className="bg-white shadow-lg"
         style={{
@@ -113,6 +127,7 @@ export default function HtmlPreview() {
           sandbox="allow-scripts allow-same-origin"
           title="HTML 미리보기"
           className="w-full h-full border-0"
+          onLoad={handleIframeLoad}
         />
       </div>
     </div>

@@ -1,13 +1,21 @@
+import { useCallback } from 'react';
 import { useEditorStore } from '../store/editorStore';
+import { downloadHtml } from '../utils/htmlSerializer';
 
 export default function Header() {
   const fileName = useEditorStore((state) => state.fileName);
+  const htmlContent = useEditorStore((state) => state.htmlContent);
   const historyIndex = useEditorStore((state) => state.historyIndex);
   const historyLength = useEditorStore((state) => state.history.length);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const resetToOriginal = useEditorStore((state) => state.resetToOriginal);
   const isDirty = useEditorStore((state) => state.isDirty);
+
+  const handleSave = useCallback(() => {
+    if (!htmlContent) return;
+    downloadHtml(htmlContent, fileName || 'edited.html');
+  }, [htmlContent, fileName]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < historyLength - 1;
@@ -61,18 +69,16 @@ export default function Header() {
           원본 복원
         </button>
         <button
-          disabled
-          className="px-3 py-1 text-xs bg-gray-700 text-gray-400 rounded cursor-not-allowed"
-          title="저장"
+          disabled={!htmlContent}
+          onClick={handleSave}
+          className={`px-3 py-1 text-xs rounded ${
+            htmlContent
+              ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+          }`}
+          title="저장 (Ctrl+S)"
         >
           저장
-        </button>
-        <button
-          disabled
-          className="px-3 py-1 text-xs bg-gray-700 text-gray-400 rounded cursor-not-allowed"
-          title="캡처"
-        >
-          캡처
         </button>
       </div>
     </header>
