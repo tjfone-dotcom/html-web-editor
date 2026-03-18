@@ -14,14 +14,16 @@ export default function HtmlPreview() {
   // Debounce timer for DOM_UPDATED history pushes
   const domUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Inject bridge script into HTML before </body> or at end */
+  /** Inject bridge script and html2canvas into HTML before </body> or at end */
   const injectBridge = useCallback((html: string): string => {
+    const html2canvasScript = `<script data-bridge src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>`;
     const bridgeScript = `<script data-bridge>${getBridgeScript()}<\/script>`;
+    const scripts = html2canvasScript + '\n' + bridgeScript;
     const bodyCloseIndex = html.lastIndexOf('</body>');
     if (bodyCloseIndex !== -1) {
-      return html.slice(0, bodyCloseIndex) + bridgeScript + html.slice(bodyCloseIndex);
+      return html.slice(0, bodyCloseIndex) + scripts + html.slice(bodyCloseIndex);
     }
-    return html + bridgeScript;
+    return html + scripts;
   }, []);
 
   useEffect(() => {

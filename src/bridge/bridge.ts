@@ -275,7 +275,235 @@ export function getBridgeScript(): string {
     if (msg.type === 'REQUEST_HTML') {
       sendDOMUpdate();
     }
+
+    // --- Section Detection ---
+    if (msg.type === 'DETECT_SECTIONS') {
+      var sections = detectSectionsInIframe();
+      window.parent.postMessage({
+        type: 'SECTIONS_DETECTED',
+        payload: { sections: sections }
+      }, '*');
+    }
+
+    // --- Section Capture ---
+    if (msg.type === 'CAPTURE_SECTION' && msg.payload) {
+      captureSectionInIframe(msg.payload);
+    }
   });
+
+  // --- Section Detection Logic ---
+  function detectSectionsInIframe() {
+    var body = document.body;
+    if (!body) return [];
+
+    var pageType = detectPageTypeInIframe();
+    if (pageType === 'slides') return detectSlides();
+    return detectScrollSections();
+  }
+
+  function detectPageTypeInIframe() {
+    // reveal.js
+    var revealSections = document.querySelectorAll('.reveal section, .slides section');
+    if (revealSections.length > 1) return 'slides';
+    // slide/page classes
+    var slideEls = document.querySelectorAll('[data-slide], .slide, .page, .swiper-slide');
+    if (slideEls.length > 1) return 'slides';
+    // impress.js
+    var steps = document.querySelectorAll('.step, [data-step]');
+    if (steps.length > 1) return 'slides';
+    // 100vh children check
+    var children = [];
+    for (var i = 0; i < document.body.children.length; i++) {
+      var ch = document.body.children[i];
+      if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
+    }
+    if (children.length > 1) {
+      var fullHeightCount = 0;
+      for (var i = 0; i < children.length; i++) {
+        var cs = window.getComputedStyle(children[i]);
+        var h = parseFloat(cs.height);
+        if (Math.abs(h - window.innerHeight) < 10) fullHeightCount++;
+      }
+      if (fullHeightCount >= children.length * 0.8) return 'slides';
+    }
+    return 'scroll';
+  }
+
+  function detectSlides() {
+    var slides = document.querySelectorAll('.reveal section:not(section section), .slides > section');
+    if (slides.length === 0) {
+      slides = document.querySelectorAll('[data-slide], .slide, .page, .swiper-slide, .step');
+    }
+    if (slides.length === 0) {
+      var children = [];
+      for (var i = 0; i < document.body.children.length; i++) {
+        var ch = document.body.children[i];
+        if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
+      }
+      slides = children;
+    }
+    var result = [];
+    for (var i = 0; i < slides.length; i++) {
+      var el = slides[i];
+      var rect = el.getBoundingClientRect();
+      result.push({
+        index: i,
+        label: '슬라이드 ' + (i + 1),
+        top: rect.top + window.scrollY,
+        height: rect.height
+      });
+    }
+    return result;
+  }
+
+  function detectScrollSections() {
+    var body = document.body;
+    // Strategy 1: section tags
+    var sectionTags = body.querySelectorAll('section');
+    if (sectionTags.length > 1) {
+      var result = [];
+      for (var i = 0; i < sectionTags.length; i++) {
+        var el = sectionTags[i];
+        var rect = el.getBoundingClientRect();
+        result.push({
+          index: i,
+          label: el.id ? '섹션: ' + el.id : '섹션 ' + (i + 1),
+          top: rect.top + window.scrollY,
+          height: rect.height
+        });
+      }
+      return result;
+    }
+
+    // Strategy 2: background color changes
+    var children = [];
+    for (var i = 0; i < body.children.length; i++) {
+      var ch = body.children[i];
+      if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
+    }
+
+    if (children.length > 1) {
+      var bgColors = [];
+      for (var i = 0; i < children.length; i++) {
+        bgColors.push(window.getComputedStyle(children[i]).backgroundColor);
+      }
+      var parseRgb = function(c) {
+        var m = c.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+        if (m) return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+        return null;
+      };
+      var sections = [];
+      var secStart = 0;
+      var prevColor = parseRgb(bgColors[0]);
+      for (var i = 1; i <= children.length; i++) {
+        var curColor = i < children.length ? parseRgb(bgColors[i]) : null;
+        var isTransp = !curColor || bgColors[i] === 'rgba(0, 0, 0, 0)';
+        var diff = 0;
+        if (prevColor && curColor && !isTransp) {
+          diff = Math.abs(prevColor[0]-curColor[0]) + Math.abs(prevColor[1]-curColor[1]) + Math.abs(prevColor[2]-curColor[2]);
+        }
+        var changed = (i === children.length) || (!isTransp && diff > 30);
+        if (changed) {
+          var top = Infinity, bottom = -Infinity;
+          for (var j = secStart; j < i; j++) {
+            var r = children[j].getBoundingClientRect();
+            var absTop = r.top + window.scrollY;
+            if (absTop < top) top = absTop;
+            if (absTop + r.height > bottom) bottom = absTop + r.height;
+          }
+          sections.push({
+            index: sections.length,
+            label: '섹션 ' + (sections.length + 1),
+            top: top,
+            height: bottom - top
+          });
+          secStart = i;
+          if (!isTransp) prevColor = curColor;
+        }
+      }
+      if (sections.length > 1) return sections;
+    }
+
+    // Strategy 3: id-bearing block elements
+    var idEls = body.querySelectorAll('[id]');
+    var blockIds = [];
+    for (var i = 0; i < idEls.length; i++) {
+      var tag = idEls[i].tagName.toLowerCase();
+      if (['div','section','article','main','header','footer','nav'].indexOf(tag) !== -1) {
+        blockIds.push(idEls[i]);
+      }
+    }
+    if (blockIds.length > 1) {
+      var result = [];
+      for (var i = 0; i < blockIds.length; i++) {
+        var rect = blockIds[i].getBoundingClientRect();
+        result.push({
+          index: i,
+          label: '섹션: ' + blockIds[i].id,
+          top: rect.top + window.scrollY,
+          height: rect.height
+        });
+      }
+      return result;
+    }
+
+    // Fallback: entire page
+    return [{
+      index: 0,
+      label: '전체 페이지',
+      top: 0,
+      height: body.scrollHeight
+    }];
+  }
+
+  // --- Capture Logic ---
+  function captureSectionInIframe(payload) {
+    var idx = payload.index;
+    var scale = payload.scale || 2;
+    var format = payload.format || 'image/png';
+    var quality = payload.quality || 0.92;
+
+    // Get section element by detection
+    var sections = detectSectionsInIframe();
+    if (idx >= sections.length) {
+      window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
+      return;
+    }
+
+    var sec = sections[idx];
+    // Find the element at that position and height
+    // Use a wrapper approach: capture a specific region
+    if (typeof html2canvas === 'undefined') {
+      window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null, error: 'html2canvas not available' } }, '*');
+      return;
+    }
+
+    // For scroll sections, we need to capture a region
+    // Strategy: find elements that match the section, or capture the body with clip
+    var targetEl = document.body;
+    var opts = {
+      scale: scale,
+      useCORS: true,
+      logging: false,
+      y: sec.top,
+      height: sec.height,
+      windowHeight: sec.height,
+      scrollY: -sec.top
+    };
+
+    html2canvas(targetEl, opts).then(function(canvas) {
+      var dataUrl = canvas.toDataURL(format, quality);
+      window.parent.postMessage({
+        type: 'SECTION_CAPTURED',
+        payload: { index: idx, dataUrl: dataUrl }
+      }, '*');
+    }).catch(function(err) {
+      window.parent.postMessage({
+        type: 'SECTION_CAPTURED',
+        payload: { index: idx, dataUrl: null, error: err.message }
+      }, '*');
+    });
+  }
 })();
 `;
 }
