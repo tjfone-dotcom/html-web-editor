@@ -1,35 +1,28 @@
 /** Supported element types that can be edited */
 export type ElementType =
   | 'text'
-  | 'image'
-  | 'link'
   | 'button'
-  | 'container'
-  | 'input'
-  | 'video'
-  | 'unknown';
+  | 'box'
+  | 'image'
+  | 'line'
+  | 'unsupported';
 
 /** Represents a currently selected element in the preview */
 export interface SelectedElement {
-  /** Unique selector path to identify the element in the DOM */
-  selector: string;
+  /** Unique editor-assigned ID */
+  editorId: string;
   /** The tag name of the element (e.g., 'div', 'span', 'img') */
   tagName: string;
+  /** CSS class name */
+  className: string;
+  /** Element id attribute */
+  id: string;
   /** Classified element type */
-  type: ElementType;
-  /** Current computed/inline styles */
-  styles: Record<string, string>;
-  /** Current HTML attributes */
-  attributes: Record<string, string>;
+  elementType: ElementType;
+  /** Current computed styles */
+  computedStyles: Record<string, string>;
   /** Text content of the element (if applicable) */
-  textContent: string | null;
-  /** Bounding rect for overlay positioning */
-  rect: {
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  };
+  textContent?: string;
   /** Breadcrumb path of parent elements */
   path: string[];
 }
@@ -45,7 +38,7 @@ export interface HistoryEntry {
 }
 
 /** View mode for the preview panel */
-export type ViewMode = 'visual' | 'code';
+export type ViewMode = 'preview' | 'code';
 
 /** Settings for HTML capture/export */
 export interface CaptureSettings {
@@ -85,6 +78,8 @@ export interface EditorState {
   fileName: string | null;
   /** The raw HTML content */
   htmlContent: string | null;
+  /** The original HTML content from initial file load */
+  originalHtmlContent: string | null;
   /** The currently selected element */
   selectedElement: SelectedElement | null;
   /** Undo history stack */
@@ -95,6 +90,10 @@ export interface EditorState {
   viewMode: ViewMode;
   /** Whether the editor has unsaved changes */
   isDirty: boolean;
+  /** Whether class-apply mode is on */
+  isClassApply: boolean;
+  /** Currently selected class for class-apply mode */
+  selectedClass: string | null;
   /** Capture settings */
   captureSettings: CaptureSettings;
   /** Whether a file is currently being loaded */
@@ -102,12 +101,17 @@ export interface EditorState {
 
   // Actions
   setFileName: (name: string | null) => void;
-  setHtmlContent: (html: string | null) => void;
+  setHtmlContent: (content: string | null, label?: string) => void;
   setSelectedElement: (element: SelectedElement | null) => void;
   setViewMode: (mode: ViewMode) => void;
+  toggleViewMode: () => void;
   setIsDirty: (dirty: boolean) => void;
   setCaptureSettings: (settings: Partial<CaptureSettings>) => void;
   setIsLoading: (loading: boolean) => void;
+  updateElementStyles: (editorId: string, styles: Record<string, string>) => void;
+  toggleClassApply: () => void;
+  setSelectedClass: (className: string | null) => void;
+  resetToOriginal: () => void;
   undo: () => void;
   redo: () => void;
   pushHistory: (entry: Omit<HistoryEntry, 'timestamp'>) => void;
