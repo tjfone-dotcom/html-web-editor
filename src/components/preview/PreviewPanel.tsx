@@ -1,10 +1,12 @@
 import { useCallback, useRef } from 'react';
 import { useEditorStore } from '../../store/editorStore';
+import CodeEditor from './CodeEditor';
 import HtmlPreview from './HtmlPreview';
 import ViewToggle from './ViewToggle';
 
 export default function PreviewPanel() {
   const htmlContent = useEditorStore((s) => s.htmlContent);
+  const viewMode = useEditorStore((s) => s.viewMode);
   const fileName = useEditorStore((s) => s.fileName);
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
   const setFileName = useEditorStore((s) => s.setFileName);
@@ -115,7 +117,7 @@ export default function PreviewPanel() {
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden">
-        <HtmlPreview />
+        {viewMode === 'code' ? <CodeEditor /> : <HtmlPreview />}
       </div>
     </div>
   );
