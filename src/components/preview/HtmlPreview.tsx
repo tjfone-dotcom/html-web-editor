@@ -94,13 +94,13 @@ export default function HtmlPreview() {
     };
   }, [setSelectedElement, setHtmlContent]);
 
-  if (!blobUrl) {
-    return null;
-  }
-
   const handleIframeLoad = useCallback((_e: SyntheticEvent<HTMLIFrameElement>) => {
     setIsIframeLoading(false);
   }, []);
+
+  if (!blobUrl) {
+    return null;
+  }
 
   return (
     <div className="w-full h-full flex items-center justify-center p-4 relative">
