@@ -10,7 +10,7 @@ export default function StatusBar() {
           {selectedElement.path.join(' > ')}
         </span>
       ) : (
-        <span>&nbsp;</span>
+        <span>준비</span>
       )}
     </div>
   );
