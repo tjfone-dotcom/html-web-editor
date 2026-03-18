@@ -103,6 +103,8 @@ export function getBridgeScript(): string {
     var editorId = assignEditorId(el);
     var tag = el.tagName.toLowerCase();
     var elType = classifyElement(el);
+    // Treat text-like boxes as 'text' for the editor panel
+    if (isTextLikeBox(el)) elType = 'text';
     var textContent = null;
     if (elType === 'text' || elType === 'button') {
       textContent = el.textContent || '';
@@ -167,23 +169,38 @@ export function getBridgeScript(): string {
     }
   }, true);
 
+  // Inline/formatting tags that don't make an element a "box"
+  var inlineTags = ['br','b','i','em','strong','u','small','sub','sup','mark','wbr','s','del','ins','abbr','code','kbd','var','samp','cite','dfn','time','data','ruby','rt','rp','bdi','bdo'];
+
+  function hasOnlyInlineChildren(el) {
+    for (var i = 0; i < el.children.length; i++) {
+      if (inlineTags.indexOf(el.children[i].tagName.toLowerCase()) === -1) return false;
+    }
+    return true;
+  }
+
+  function isTextLikeBox(el) {
+    return classifyElement(el) === 'box' && hasOnlyInlineChildren(el) && el.textContent.trim().length > 0;
+  }
+
   // Smart target: prefer text/button children inside box elements
   function findBestTarget(el) {
     var type = classifyElement(el);
     if (type !== 'box') return el;
 
+    // box with only inline/formatting tags + text content → text-like, select it
+    if (isTextLikeBox(el)) return el;
+
     // box: look for a single text/button child
     var textChildren = [];
     for (var i = 0; i < el.children.length; i++) {
-      var childType = classifyElement(el.children[i]);
-      if (childType === 'text' || childType === 'button') {
-        textChildren.push(el.children[i]);
+      var child = el.children[i];
+      var childType = classifyElement(child);
+      if (childType === 'text' || childType === 'button' || isTextLikeBox(child)) {
+        textChildren.push(child);
       }
     }
     if (textChildren.length === 1) return textChildren[0];
-
-    // No child elements but has text content → treat as text-like box
-    if (el.children.length === 0 && el.textContent.trim().length > 0) return el;
 
     return el;
   }
@@ -219,9 +236,9 @@ export function getBridgeScript(): string {
     el.removeAttribute('data-bridge-hover');
     selectElement(el);
 
-    // Text/button: immediately enable inline editing
+    // Text/button/text-like box: immediately enable inline editing
     var elType = classifyElement(el);
-    if (elType === 'text' || elType === 'button') {
+    if (elType === 'text' || elType === 'button' || isTextLikeBox(el)) {
       enableInlineEdit(el);
     }
   }, true);
