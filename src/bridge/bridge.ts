@@ -167,26 +167,29 @@ export function getBridgeScript(): string {
     }
   }, true);
 
-  document.addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var el = e.target;
-    if (isBridgeOrMeta(el) || el === document.body) return;
-    // Remove hover outline on click
-    el.removeAttribute('data-bridge-hover');
-    selectElement(el);
-  }, true);
+  // Smart target: prefer text/button children inside box elements
+  function findBestTarget(el) {
+    var type = classifyElement(el);
+    if (type !== 'box') return el;
 
-  document.addEventListener('dblclick', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    var el = e.target;
-    if (isBridgeOrMeta(el) || el === document.body) return;
-    var elType = classifyElement(el);
-    if (elType !== 'text' && elType !== 'button') return;
-    // Already contentEditable
+    // box: look for a single text/button child
+    var textChildren = [];
+    for (var i = 0; i < el.children.length; i++) {
+      var childType = classifyElement(el.children[i]);
+      if (childType === 'text' || childType === 'button') {
+        textChildren.push(el.children[i]);
+      }
+    }
+    if (textChildren.length === 1) return textChildren[0];
+
+    // No child elements but has text content → treat as text-like box
+    if (el.children.length === 0 && el.textContent.trim().length > 0) return el;
+
+    return el;
+  }
+
+  function enableInlineEdit(el) {
     if (el.contentEditable === 'true') return;
-
     el.contentEditable = 'true';
     el.focus();
 
@@ -206,6 +209,37 @@ export function getBridgeScript(): string {
     }
 
     el.addEventListener('blur', onBlur);
+  }
+
+  document.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var el = findBestTarget(e.target);
+    if (isBridgeOrMeta(el) || el === document.body) return;
+    el.removeAttribute('data-bridge-hover');
+    selectElement(el);
+
+    // Text/button: immediately enable inline editing
+    var elType = classifyElement(el);
+    if (elType === 'text' || elType === 'button') {
+      enableInlineEdit(el);
+    }
+  }, true);
+
+  document.addEventListener('dblclick', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Select the parent element (go up to box level)
+    if (selectedEl && selectedEl.parentElement
+        && selectedEl.parentElement !== document.body
+        && selectedEl.parentElement !== document.documentElement) {
+      // Disable inline editing on current element if active
+      if (selectedEl.contentEditable === 'true') {
+        selectedEl.contentEditable = 'false';
+        selectedEl.removeAttribute('contenteditable');
+      }
+      selectElement(selectedEl.parentElement);
+    }
   }, true);
 
   // Intercept link clicks and form submissions
