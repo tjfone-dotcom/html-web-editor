@@ -24,6 +24,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedClass: null,
   captureSettings: defaultCaptureSettings,
   isLoading: false,
+  isUndoRedo: false,
 
   // Actions
   setFileName: (name: string | null) => set({ fileName: name }),
@@ -97,6 +98,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         htmlContent: state.history[newIndex].html,
         historyIndex: newIndex,
         isDirty: state.history[newIndex].html !== state.originalHtmlContent,
+        isUndoRedo: true,
       });
     }
   },
@@ -109,6 +111,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         htmlContent: state.history[newIndex].html,
         historyIndex: newIndex,
         isDirty: state.history[newIndex].html !== state.originalHtmlContent,
+        isUndoRedo: true,
       });
     }
   },
@@ -146,5 +149,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedClass: null,
       captureSettings: defaultCaptureSettings,
       isLoading: false,
+      isUndoRedo: false,
     }),
 }));

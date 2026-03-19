@@ -6,6 +6,7 @@ export default function HtmlPreview() {
   const htmlContent = useEditorStore((s) => s.htmlContent);
   const setSelectedElement = useEditorStore((s) => s.setSelectedElement);
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
+  const isUndoRedo = useEditorStore((s) => s.isUndoRedo);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
   const prevBlobUrlRef = useRef<string | null>(null);
@@ -28,16 +29,29 @@ export default function HtmlPreview() {
   }, []);
 
   useEffect(() => {
-    // Revoke previous Blob URL
-    if (prevBlobUrlRef.current) {
-      URL.revokeObjectURL(prevBlobUrlRef.current);
-    }
-
     if (htmlContent) {
+      // Undo/redo: send REPLACE_DOM instead of reloading iframe
+      if (isUndoRedo) {
+        useEditorStore.setState({ isUndoRedo: false });
+        if (iframeRef.current?.contentWindow) {
+          iframeRef.current.contentWindow.postMessage({
+            type: 'REPLACE_DOM',
+            payload: { html: htmlContent },
+          }, '*');
+        }
+        return;
+      }
+
       if (suppressNextUpdate.current) {
         suppressNextUpdate.current = false;
         return;
       }
+
+      // Revoke previous Blob URL
+      if (prevBlobUrlRef.current) {
+        URL.revokeObjectURL(prevBlobUrlRef.current);
+      }
+
       const injected = injectBridge(htmlContent);
       const blob = new Blob([injected], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -45,6 +59,9 @@ export default function HtmlPreview() {
       setBlobUrl(url);
       prevBlobUrlRef.current = url;
     } else {
+      if (prevBlobUrlRef.current) {
+        URL.revokeObjectURL(prevBlobUrlRef.current);
+      }
       setBlobUrl(null);
       prevBlobUrlRef.current = null;
     }
@@ -56,7 +73,7 @@ export default function HtmlPreview() {
         prevBlobUrlRef.current = null;
       }
     };
-  }, [htmlContent, injectBridge]);
+  }, [htmlContent, injectBridge, isUndoRedo]);
 
   // Listen for messages from iframe
   useEffect(() => {
@@ -93,6 +110,18 @@ export default function HtmlPreview() {
       }
     };
   }, [setSelectedElement, setHtmlContent]);
+
+  // Listen for bridge-navigate custom events from ElementInfo buttons
+  useEffect(() => {
+    function handleBridgeNavigate(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.type && iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({ type: detail.type }, '*');
+      }
+    }
+    window.addEventListener('bridge-navigate', handleBridgeNavigate);
+    return () => window.removeEventListener('bridge-navigate', handleBridgeNavigate);
+  }, []);
 
   const handleIframeLoad = useCallback((_e: SyntheticEvent<HTMLIFrameElement>) => {
     setIsIframeLoading(false);

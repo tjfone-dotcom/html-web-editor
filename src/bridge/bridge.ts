@@ -92,7 +92,7 @@ export function getBridgeScript(): string {
     return el.getAttribute('data-editor-id');
   }
 
-  function selectElement(el) {
+  function selectElement(el, forceBox) {
     // Deselect previous
     if (selectedEl) {
       selectedEl.removeAttribute('data-bridge-selected');
@@ -103,8 +103,8 @@ export function getBridgeScript(): string {
     var editorId = assignEditorId(el);
     var tag = el.tagName.toLowerCase();
     var elType = classifyElement(el);
-    // Treat text-like boxes as 'text' for the editor panel
-    if (isTextLikeBox(el)) elType = 'text';
+    // Treat text-like boxes as 'text' for the editor panel (unless forceBox)
+    if (!forceBox && isTextLikeBox(el)) elType = 'text';
     var textContent = null;
     if (elType === 'text' || elType === 'button') {
       textContent = el.textContent || '';
@@ -154,6 +154,237 @@ export function getBridgeScript(): string {
     }, '*');
   }
 
+  // --- Slide State Save/Restore (for REPLACE_DOM viewport preservation) ---
+
+  function getSlideSelector() {
+    if (document.querySelectorAll('.reveal section:not(section section)').length > 1)
+      return '.reveal section:not(section section)';
+    if (document.querySelectorAll('.slides > section').length > 1)
+      return '.slides > section';
+    var selectors = ['.slide', '.page', '.swiper-slide', '[data-slide]', '.step'];
+    for (var si = 0; si < selectors.length; si++) {
+      if (document.querySelectorAll(selectors[si]).length > 1) return selectors[si];
+    }
+    return null;
+  }
+
+  var NAV_CLASSES = ['active','current','present','visible','swiper-slide-active',
+                     'hidden','past','future','swiper-slide-prev','swiper-slide-next'];
+
+  function captureSlideState() {
+    var sel = getSlideSelector();
+    var slides;
+    var usingFallback = false;
+
+    if (sel) {
+      slides = Array.prototype.slice.call(document.querySelectorAll(sel));
+    } else {
+      // Fallback: body direct children (excluding bridge elements)
+      var children = [];
+      for (var i = 0; i < document.body.children.length; i++) {
+        var ch = document.body.children[i];
+        if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
+      }
+      if (children.length < 2) return null;
+      slides = children;
+      usingFallback = true;
+    }
+
+    if (!slides || slides.length === 0) return null;
+    var states = [];
+    for (var i = 0; i < slides.length; i++) {
+      var navCls = [];
+      for (var j = 0; j < NAV_CLASSES.length; j++) {
+        if (slides[i].classList.contains(NAV_CLASSES[j])) navCls.push(NAV_CLASSES[j]);
+      }
+      states.push({
+        navClasses: navCls,
+        display: slides[i].style.display,
+        visibility: slides[i].style.visibility,
+        opacity: slides[i].style.opacity,
+        transform: slides[i].style.transform
+      });
+    }
+    return { selector: sel, states: states, usingFallback: usingFallback };
+  }
+
+  function restoreSlideState(saved) {
+    var slides;
+    if (saved.selector) {
+      slides = Array.prototype.slice.call(document.querySelectorAll(saved.selector));
+    } else if (saved.usingFallback) {
+      var children = [];
+      for (var i = 0; i < document.body.children.length; i++) {
+        var ch = document.body.children[i];
+        if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
+      }
+      slides = children;
+    } else {
+      return;
+    }
+
+    if (slides.length !== saved.states.length) return;
+    for (var i = 0; i < slides.length; i++) {
+      var st = saved.states[i];
+      for (var j = 0; j < NAV_CLASSES.length; j++) slides[i].classList.remove(NAV_CLASSES[j]);
+      for (var j = 0; j < st.navClasses.length; j++) slides[i].classList.add(st.navClasses[j]);
+      slides[i].style.display = st.display || '';
+      slides[i].style.visibility = st.visibility || '';
+      slides[i].style.opacity = st.opacity || '';
+      slides[i].style.transform = st.transform || '';
+    }
+  }
+
+  // --- Scroll State Save/Restore (handles container-based scrolling) ---
+
+  function getElementPath(el) {
+    var path = [];
+    var cur = el;
+    while (cur && cur !== document.body && cur !== document.documentElement) {
+      var parent = cur.parentElement;
+      if (!parent) break;
+      var idx = 0;
+      for (var i = 0; i < parent.children.length; i++) {
+        if (parent.children[i] === cur) { idx = i; break; }
+      }
+      path.unshift(idx);
+      cur = parent;
+    }
+    return path;
+  }
+
+  function resolveElementByPath(path) {
+    var cur = document.body;
+    for (var i = 0; i < path.length; i++) {
+      if (!cur || !cur.children || path[i] >= cur.children.length) return null;
+      cur = cur.children[path[i]];
+    }
+    return cur;
+  }
+
+  function captureScrollState() {
+    var results = [];
+    // Window scroll
+    results.push({ type: 'window', scrollX: window.scrollX, scrollY: window.scrollY });
+    // documentElement & body
+    if (document.documentElement.scrollTop > 0 || document.documentElement.scrollLeft > 0) {
+      results.push({ type: 'docEl', scrollTop: document.documentElement.scrollTop, scrollLeft: document.documentElement.scrollLeft });
+    }
+    if (document.body.scrollTop > 0 || document.body.scrollLeft > 0) {
+      results.push({ type: 'body', scrollTop: document.body.scrollTop, scrollLeft: document.body.scrollLeft });
+    }
+    // Scrollable containers with actual scroll offset
+    var all = document.body.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.scrollTop === 0 && el.scrollLeft === 0) continue;
+      var cs = window.getComputedStyle(el);
+      var ov = cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY;
+      if (ov.indexOf('auto') !== -1 || ov.indexOf('scroll') !== -1) {
+        results.push({ type: 'element', path: getElementPath(el), scrollTop: el.scrollTop, scrollLeft: el.scrollLeft });
+      }
+    }
+    return results;
+  }
+
+  function restoreScrollState(saved) {
+    for (var i = 0; i < saved.length; i++) {
+      var entry = saved[i];
+      if (entry.type === 'window') {
+        window.scrollTo(entry.scrollX, entry.scrollY);
+      } else if (entry.type === 'docEl') {
+        document.documentElement.scrollTop = entry.scrollTop;
+        document.documentElement.scrollLeft = entry.scrollLeft;
+      } else if (entry.type === 'body') {
+        document.body.scrollTop = entry.scrollTop;
+        document.body.scrollLeft = entry.scrollLeft;
+      } else if (entry.type === 'element' && entry.path) {
+        var el = resolveElementByPath(entry.path);
+        if (el) { el.scrollTop = entry.scrollTop; el.scrollLeft = entry.scrollLeft; }
+      }
+    }
+  }
+
+  // --- DOM Morph (for REPLACE_DOM - preserves event listeners) ---
+
+  function morphAttributes(oldEl, newEl) {
+    // Remove attributes not in new element (skip bridge attrs)
+    for (var i = oldEl.attributes.length - 1; i >= 0; i--) {
+      var name = oldEl.attributes[i].name;
+      if (name === 'data-bridge-hover' || name === 'data-bridge-selected'
+          || name === 'data-editor-id' || name === 'contenteditable') continue;
+      if (!newEl.hasAttribute(name)) oldEl.removeAttribute(name);
+    }
+    // Set/update attributes from new element
+    for (var i = 0; i < newEl.attributes.length; i++) {
+      var attr = newEl.attributes[i];
+      if (oldEl.getAttribute(attr.name) !== attr.value) {
+        oldEl.setAttribute(attr.name, attr.value);
+      }
+    }
+  }
+
+  function morphNode(oldNode, newNode, parent) {
+    // Text nodes
+    if (oldNode.nodeType === 3 && newNode.nodeType === 3) {
+      if (oldNode.textContent !== newNode.textContent) oldNode.textContent = newNode.textContent;
+      return;
+    }
+    // Comment nodes
+    if (oldNode.nodeType === 8 && newNode.nodeType === 8) {
+      if (oldNode.textContent !== newNode.textContent) oldNode.textContent = newNode.textContent;
+      return;
+    }
+    // Different type or tag → replace entirely
+    if (oldNode.nodeType !== newNode.nodeType ||
+        (oldNode.nodeType === 1 && newNode.nodeType === 1 && oldNode.tagName !== newNode.tagName)) {
+      parent.replaceChild(document.importNode(newNode, true), oldNode);
+      return;
+    }
+    // Same element → update attributes and recurse children
+    if (oldNode.nodeType === 1) {
+      morphAttributes(oldNode, newNode);
+      morphChildren(oldNode, newNode);
+    }
+  }
+
+  function morphChildren(oldParent, newParent) {
+    // Collect non-bridge children
+    var oldKids = [];
+    var newKids = [];
+    for (var i = 0; i < oldParent.childNodes.length; i++) {
+      var n = oldParent.childNodes[i];
+      if (n.nodeType === 1 && n.hasAttribute && (n.hasAttribute('data-bridge') || n.hasAttribute('data-bridge-styles'))) continue;
+      oldKids.push(n);
+    }
+    for (var i = 0; i < newParent.childNodes.length; i++) {
+      newKids.push(newParent.childNodes[i]);
+    }
+
+    // Find first bridge element as insert anchor
+    var bridgeAnchor = null;
+    for (var i = 0; i < oldParent.childNodes.length; i++) {
+      var n = oldParent.childNodes[i];
+      if (n.nodeType === 1 && n.hasAttribute && (n.hasAttribute('data-bridge') || n.hasAttribute('data-bridge-styles'))) {
+        bridgeAnchor = n;
+        break;
+      }
+    }
+
+    var maxLen = Math.max(oldKids.length, newKids.length);
+    for (var i = 0; i < maxLen; i++) {
+      if (i >= oldKids.length) {
+        // Add new node
+        oldParent.insertBefore(document.importNode(newKids[i], true), bridgeAnchor);
+      } else if (i >= newKids.length) {
+        // Remove extra old node
+        oldParent.removeChild(oldKids[i]);
+      } else {
+        morphNode(oldKids[i], newKids[i], oldParent);
+      }
+    }
+  }
+
   // --- Event Handlers ---
 
   document.addEventListener('mouseover', function(e) {
@@ -170,7 +401,7 @@ export function getBridgeScript(): string {
   }, true);
 
   // Inline/formatting tags that don't make an element a "box"
-  var inlineTags = ['br','b','i','em','strong','u','small','sub','sup','mark','wbr','s','del','ins','abbr','code','kbd','var','samp','cite','dfn','time','data','ruby','rt','rp','bdi','bdo'];
+  var inlineTags = ['br','b','i','em','strong','u','small','sub','sup','mark','wbr','s','del','ins','abbr','code','kbd','var','samp','cite','dfn','time','data','ruby','rt','rp','bdi','bdo','span'];
 
   function hasOnlyInlineChildren(el) {
     for (var i = 0; i < el.children.length; i++) {
@@ -195,12 +426,22 @@ export function getBridgeScript(): string {
     var textChildren = [];
     for (var i = 0; i < el.children.length; i++) {
       var child = el.children[i];
+      if (isBridgeOrMeta(child)) continue;
       var childType = classifyElement(child);
       if (childType === 'text' || childType === 'button' || isTextLikeBox(child)) {
         textChildren.push(child);
       }
     }
     if (textChildren.length === 1) return textChildren[0];
+
+    // Recurse: if single non-bridge child is a box, dig deeper
+    var nonBridgeChildren = [];
+    for (var i = 0; i < el.children.length; i++) {
+      if (!isBridgeOrMeta(el.children[i])) nonBridgeChildren.push(el.children[i]);
+    }
+    if (nonBridgeChildren.length === 1) {
+      return findBestTarget(nonBridgeChildren[0]);
+    }
 
     return el;
   }
@@ -232,6 +473,31 @@ export function getBridgeScript(): string {
     e.preventDefault();
     e.stopPropagation();
     var el = findBestTarget(e.target);
+
+    // If target is a box with no meaningful text, try to find a better target underneath
+    if (el && classifyElement(el) === 'box' && !isTextLikeBox(el)) {
+      var elements = document.elementsFromPoint(e.clientX, e.clientY);
+      for (var ei = 0; ei < elements.length; ei++) {
+        var candidate = elements[ei];
+        if (candidate === el || isBridgeOrMeta(candidate) || candidate === document.body) continue;
+
+        // Check if the candidate itself is a text/button element (e.g. a <span>)
+        var candidateType = classifyElement(candidate);
+        if (candidateType === 'text' || candidateType === 'button') {
+          el = candidate;
+          break;
+        }
+
+        // Otherwise try findBestTarget on the candidate
+        var best = findBestTarget(candidate);
+        var bestType = classifyElement(best);
+        if (bestType === 'text' || bestType === 'button' || isTextLikeBox(best)) {
+          el = best;
+          break;
+        }
+      }
+    }
+
     if (isBridgeOrMeta(el) || el === document.body) return;
     el.removeAttribute('data-bridge-hover');
     selectElement(el);
@@ -246,15 +512,24 @@ export function getBridgeScript(): string {
   document.addEventListener('dblclick', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    // Select the parent element (go up to box level)
-    if (selectedEl && selectedEl.parentElement
+    if (!selectedEl) return;
+
+    // Disable inline editing on current element if active
+    if (selectedEl.contentEditable === 'true') {
+      selectedEl.contentEditable = 'false';
+      selectedEl.removeAttribute('contenteditable');
+    }
+
+    // text-like-box: re-select same element as box type (show box properties)
+    if (isTextLikeBox(selectedEl)) {
+      selectElement(selectedEl, true);
+      return;
+    }
+
+    // Normal text/button: select parent
+    if (selectedEl.parentElement
         && selectedEl.parentElement !== document.body
         && selectedEl.parentElement !== document.documentElement) {
-      // Disable inline editing on current element if active
-      if (selectedEl.contentEditable === 'true') {
-        selectedEl.contentEditable = 'false';
-        selectedEl.removeAttribute('contenteditable');
-      }
       selectElement(selectedEl.parentElement);
     }
   }, true);
@@ -325,6 +600,57 @@ export function getBridgeScript(): string {
 
     if (msg.type === 'REQUEST_HTML') {
       sendDOMUpdate();
+    }
+
+    // --- DOM Navigation ---
+    if (msg.type === 'SELECT_PARENT') {
+      if (selectedEl && selectedEl.parentElement
+          && selectedEl.parentElement !== document.body
+          && selectedEl.parentElement !== document.documentElement) {
+        if (selectedEl.contentEditable === 'true') {
+          selectedEl.contentEditable = 'false';
+          selectedEl.removeAttribute('contenteditable');
+        }
+        selectElement(selectedEl.parentElement);
+      }
+    }
+
+    if (msg.type === 'SELECT_CHILD') {
+      if (selectedEl) {
+        for (var ci = 0; ci < selectedEl.children.length; ci++) {
+          var child = selectedEl.children[ci];
+          if (!isBridgeOrMeta(child)) {
+            selectElement(child);
+            break;
+          }
+        }
+      }
+    }
+
+    // --- DOM Replace via morph (preserves event listeners for undo/redo) ---
+    if (msg.type === 'REPLACE_DOM' && msg.payload && msg.payload.html) {
+      // 1. Save viewport state (scroll + slide) before morph
+      var scrollState = captureScrollState();
+      var isSlideDoc = detectPageTypeInIframe() === 'slides';
+      var savedSlideState = isSlideDoc ? captureSlideState() : null;
+
+      // 2. Morph content
+      var parser = new DOMParser();
+      var newDoc = parser.parseFromString(msg.payload.html, 'text/html');
+      morphChildren(document.body, newDoc.body);
+
+      // 3. Synchronous restore (prevents MutationObserver race conditions)
+      if (isSlideDoc && savedSlideState) {
+        restoreSlideState(savedSlideState);
+      }
+      restoreScrollState(scrollState);
+
+      // 4. Clear selection
+      if (selectedEl) {
+        selectedEl.removeAttribute('data-bridge-selected');
+        selectedEl = null;
+        window.parent.postMessage({ type: 'ELEMENT_SELECTED', payload: null }, '*');
+      }
     }
 
     // --- Section Detection ---

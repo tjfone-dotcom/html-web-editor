@@ -19,6 +19,14 @@ const typeBadgeColors: Record<ElementType, string> = {
   unsupported: 'bg-red-600',
 };
 
+function navigateUp() {
+  window.dispatchEvent(new CustomEvent('bridge-navigate', { detail: { type: 'SELECT_PARENT' } }));
+}
+
+function navigateDown() {
+  window.dispatchEvent(new CustomEvent('bridge-navigate', { detail: { type: 'SELECT_CHILD' } }));
+}
+
 export default function ElementInfo() {
   const selectedElement = useEditorStore((s) => s.selectedElement);
 
@@ -44,6 +52,22 @@ export default function ElementInfo() {
         >
           {typeLabels[elType] || elType}
         </span>
+        <div className="ml-auto flex gap-1">
+          <button
+            onClick={navigateUp}
+            className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-xs"
+            title="부모 요소 선택 (▲)"
+          >
+            ▲
+          </button>
+          <button
+            onClick={navigateDown}
+            className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-xs"
+            title="첫 번째 자식 선택 (▼)"
+          >
+            ▼
+          </button>
+        </div>
       </div>
       {id && (
         <div className="text-xs text-gray-400 mb-1">

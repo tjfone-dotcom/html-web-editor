@@ -98,6 +98,8 @@ export interface EditorState {
   captureSettings: CaptureSettings;
   /** Whether a file is currently being loaded */
   isLoading: boolean;
+  /** Flag set by undo/redo to signal DOM-only replacement instead of iframe reload */
+  isUndoRedo: boolean;
 
   // Actions
   setFileName: (name: string | null) => void;
