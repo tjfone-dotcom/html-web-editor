@@ -48,7 +48,7 @@ export default function TextProperties() {
   const [lineHeight, setLineHeight] = useState(parseLineHeight(cs['line-height'] ?? 'normal', parsePx(cs['font-size'] ?? '16px')));
   const [letterSpacing, setLetterSpacing] = useState(parsePx(cs['letter-spacing'] ?? '0px'));
 
-  // Reset local state when selected element changes
+  // Reset all local state when selected element changes
   useEffect(() => {
     if (!selectedElement) return;
     const cs = selectedElement.computedStyles;
@@ -62,6 +62,11 @@ export default function TextProperties() {
     setLineHeight(parseLineHeight(cs['line-height'] ?? 'normal', parsePx(cs['font-size'] ?? '16px')));
     setLetterSpacing(parsePx(cs['letter-spacing'] ?? '0px'));
   }, [selectedElement?.editorId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync textContent when inline editing changes it externally
+  useEffect(() => {
+    setTextContent(selectedElement?.textContent ?? '');
+  }, [selectedElement?.textContent]);
 
   const applyStyle = useCallback(
     (styles: Record<string, string>) => {

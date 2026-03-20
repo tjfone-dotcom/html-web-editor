@@ -98,7 +98,11 @@ export default function HtmlPreview() {
       }
 
       if (msg.type === 'TEXT_CHANGED' && msg.payload) {
-        // Text change is followed by DOM_UPDATED, so we just let DOM_UPDATED handle store update
+        // Update selectedElement.textContent in real-time while user is typing
+        const current = useEditorStore.getState().selectedElement;
+        if (current && current.editorId === msg.payload.editorId) {
+          setSelectedElement({ ...current, textContent: msg.payload.text });
+        }
       }
     }
 

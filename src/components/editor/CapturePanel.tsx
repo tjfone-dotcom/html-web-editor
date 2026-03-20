@@ -23,6 +23,11 @@ export default function CapturePanel() {
     return document.querySelector('iframe[title="HTML 미리보기"]');
   }, []);
 
+  const handleReset = useCallback(() => {
+    setSections([]);
+    setError(null);
+  }, []);
+
   const handleDetect = useCallback(async () => {
     const iframe = getIframe();
     if (!iframe) {
@@ -141,15 +146,25 @@ export default function CapturePanel() {
         </div>
       </div>
 
-      {/* Detect sections button */}
-      <button
-        type="button"
-        onClick={handleDetect}
-        disabled={isDetecting || isCapturing}
-        className="w-full py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed mb-2"
-      >
-        {isDetecting ? '섹션 감지 중...' : '섹션 감지'}
-      </button>
+      {/* Detect / Reset buttons */}
+      <div className="flex gap-2 mb-2">
+        <button
+          type="button"
+          onClick={handleDetect}
+          disabled={isDetecting || isCapturing}
+          className="flex-1 py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isDetecting ? '감지 중...' : '섹션 감지'}
+        </button>
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={isDetecting || isCapturing || sections.length === 0}
+          className="flex-1 py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          초기화
+        </button>
+      </div>
 
       {/* Detected sections list */}
       {sections.length > 0 && (

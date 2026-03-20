@@ -168,6 +168,17 @@ export function getBridgeScript(): string {
     return null;
   }
 
+  function getSlideElements() {
+    var sel = getSlideSelector();
+    if (sel) return Array.prototype.slice.call(document.querySelectorAll(sel));
+    var children = [];
+    for (var i = 0; i < document.body.children.length; i++) {
+      var ch = document.body.children[i];
+      if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
+    }
+    return children;
+  }
+
   var NAV_CLASSES = ['active','current','present','visible','swiper-slide-active',
                      'hidden','past','future','swiper-slide-prev','swiper-slide-next'];
 
@@ -237,7 +248,7 @@ export function getBridgeScript(): string {
 
   // --- Scroll State Save/Restore (handles container-based scrolling) ---
 
-  function getElementPath(el) {
+  function getNodeIndexPath(el) {
     var path = [];
     var cur = el;
     while (cur && cur !== document.body && cur !== document.documentElement) {
@@ -281,7 +292,7 @@ export function getBridgeScript(): string {
       var cs = window.getComputedStyle(el);
       var ov = cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY;
       if (ov.indexOf('auto') !== -1 || ov.indexOf('scroll') !== -1) {
-        results.push({ type: 'element', path: getElementPath(el), scrollTop: el.scrollTop, scrollLeft: el.scrollLeft });
+        results.push({ type: 'element', path: getNodeIndexPath(el), scrollTop: el.scrollTop, scrollLeft: el.scrollLeft });
       }
     }
     return results;
@@ -451,21 +462,30 @@ export function getBridgeScript(): string {
     el.contentEditable = 'true';
     el.focus();
 
-    function onBlur() {
-      el.removeEventListener('blur', onBlur);
-      el.contentEditable = 'false';
-      el.removeAttribute('contenteditable');
-      var newText = el.textContent || '';
+    function sendTextChanged() {
       window.parent.postMessage({
         type: 'TEXT_CHANGED',
         payload: {
           editorId: el.getAttribute('data-editor-id') || '',
-          text: newText
+          text: el.textContent || ''
         }
       }, '*');
+    }
+
+    function onInput() {
+      sendTextChanged();
+    }
+
+    function onBlur() {
+      el.removeEventListener('blur', onBlur);
+      el.removeEventListener('input', onInput);
+      el.contentEditable = 'false';
+      el.removeAttribute('contenteditable');
+      sendTextChanged();
       sendDOMUpdate();
     }
 
+    el.addEventListener('input', onInput);
     el.addEventListener('blur', onBlur);
   }
 
@@ -834,13 +854,287 @@ export function getBridgeScript(): string {
   }
 
   // --- Capture Logic ---
+
+  // Fix background-clip:text elements before html2canvas (not supported → transparent text)
+  function extractFirstGradientColor(bgImage) {
+    if (!bgImage || bgImage === 'none') return null;
+    var rgbMatch = bgImage.match(/rgba?\\(\\s*\\d+\\s*,\\s*\\d+\\s*,\\s*\\d+(?:\\s*,\\s*[\\d.]+)?\\s*\\)/);
+    if (rgbMatch) return rgbMatch[0];
+    var hexMatch = bgImage.match(/#[0-9a-fA-F]{3,8}/);
+    if (hexMatch) return hexMatch[0];
+    return null;
+  }
+
+  function fixClipTextForCapture() {
+    var fixed = [];
+    var all = document.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      var cs = window.getComputedStyle(el);
+      var bgClip = cs.webkitBackgroundClip || cs.backgroundClip || '';
+      if (bgClip !== 'text') continue;
+      var color = cs.color;
+      var webkitFill = cs.webkitTextFillColor || '';
+      var isTransparent = (color === 'rgba(0, 0, 0, 0)' || color === 'transparent'
+                           || webkitFill === 'rgba(0, 0, 0, 0)' || webkitFill === 'transparent');
+      if (!isTransparent) continue;
+      var bgImage = cs.backgroundImage;
+      var extractedColor = extractFirstGradientColor(bgImage);
+      if (!extractedColor) extractedColor = '#333333';
+      fixed.push({
+        el: el,
+        color: el.style.color,
+        webkitTextFillColor: el.style.webkitTextFillColor,
+        webkitBackgroundClip: el.style.webkitBackgroundClip,
+        backgroundClip: el.style.backgroundClip,
+        backgroundImage: el.style.backgroundImage
+      });
+      el.style.color = extractedColor;
+      el.style.webkitTextFillColor = extractedColor;
+      el.style.backgroundImage = 'none';
+      el.style.webkitBackgroundClip = '';
+      el.style.backgroundClip = '';
+    }
+    return fixed;
+  }
+
+  function restoreClipText(fixed) {
+    for (var i = 0; i < fixed.length; i++) {
+      var item = fixed[i];
+      item.el.style.color = item.color;
+      item.el.style.webkitTextFillColor = item.webkitTextFillColor;
+      item.el.style.backgroundImage = item.backgroundImage;
+      item.el.style.webkitBackgroundClip = item.webkitBackgroundClip;
+      item.el.style.backgroundClip = item.backgroundClip;
+    }
+  }
+
+  // Fix large filter:blur values (html2canvas v1.4.1 renders them unblurred)
+  function fixFilterForCapture() {
+    var fixed = [];
+    var all = document.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      var cs = window.getComputedStyle(el);
+      var filter = cs.filter;
+      if (!filter || filter === 'none') continue;
+      var blurMatch = filter.match(/blur\\(([\\d.]+)px\\)/);
+      if (!blurMatch || parseFloat(blurMatch[1]) <= 20) continue;
+      fixed.push({ el: el, filter: el.style.filter });
+      el.style.filter = filter.replace(/blur\\(([\\d.]+)px\\)/g, function(m, val) {
+        return 'blur(' + Math.min(parseFloat(val), 20) + 'px)';
+      });
+    }
+    return fixed;
+  }
+
+  function restoreFilter(fixed) {
+    for (var i = 0; i < fixed.length; i++) {
+      fixed[i].el.style.filter = fixed[i].filter;
+    }
+  }
+
+  // Force elements at opacity:0 / visibility:hidden to visible state.
+  // Called after animation:none CSS is applied so elements are frozen at initial (hidden) state.
+  function forceVisibleState(root) {
+    var fixed = [];
+    var all = (root || document).querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (isBridgeOrMeta(el)) continue;
+      var tag = el.tagName ? el.tagName.toLowerCase() : '';
+      if (tag === 'script' || tag === 'style' || tag === 'noscript') continue;
+
+      var cs = window.getComputedStyle(el);
+      var entry = null;
+
+      var op = parseFloat(cs.opacity);
+      if (op < 0.05) {
+        entry = entry || { el: el };
+        entry.opacity = el.style.opacity;
+        el.style.opacity = '1';
+        // Also clear off-screen transform for animation-displaced elements
+        if (cs.transform && cs.transform !== 'none' && cs.transform !== 'matrix(1, 0, 0, 1, 0, 0)') {
+          entry.transform = el.style.transform;
+          el.style.transform = 'none';
+        }
+      }
+
+      if (cs.visibility === 'hidden') {
+        entry = entry || { el: el };
+        entry.visibility = el.style.visibility;
+        el.style.visibility = 'visible';
+      }
+
+      if (entry) fixed.push(entry);
+    }
+    return fixed;
+  }
+
+  function restoreForceVisible(fixed) {
+    for (var i = 0; i < fixed.length; i++) {
+      var item = fixed[i];
+      if ('opacity' in item) item.el.style.opacity = item.opacity;
+      if ('visibility' in item) item.el.style.visibility = item.visibility;
+      if ('transform' in item) item.el.style.transform = item.transform;
+    }
+  }
+
+  // Hide all position:fixed elements at bottom:0 (navigation bars, progress bars, etc.)
+  // Called before html2canvas to exclude navigation UI from captured images.
+  function hideFixedBottom() {
+    var hidden = [];
+    var all = document.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (isBridgeOrMeta(el)) continue;
+      var cs = window.getComputedStyle(el);
+      if (cs.position === 'fixed' && cs.bottom === '0px') {
+        hidden.push({ el: el, display: el.style.display });
+        el.style.display = 'none';
+      }
+    }
+    return hidden;
+  }
+
+  function restoreFixedBottom(hidden) {
+    for (var i = 0; i < hidden.length; i++) {
+      hidden[i].el.style.display = hidden[i].display;
+    }
+  }
+
+  function captureSlideByIsolation(idx, scale, format, quality) {
+    var slides = getSlideElements();
+    if (!slides || idx >= slides.length) {
+      window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
+      return;
+    }
+
+    // Save each slide's inline styles
+    var savedStyles = [];
+    for (var i = 0; i < slides.length; i++) {
+      savedStyles.push({
+        display: slides[i].style.display,
+        visibility: slides[i].style.visibility,
+        opacity: slides[i].style.opacity,
+        transform: slides[i].style.transform,
+        position: slides[i].style.position,
+        top: slides[i].style.top,
+        left: slides[i].style.left,
+        width: slides[i].style.width,
+        zIndex: slides[i].style.zIndex
+      });
+    }
+
+    // Isolate target slide: show it, hide others
+    for (var i = 0; i < slides.length; i++) {
+      if (i === idx) {
+        slides[i].style.display = '';          // clear inline display → CSS class flex layout applies
+        slides[i].style.visibility = 'visible';
+        slides[i].style.opacity = '1';
+        slides[i].style.transform = 'none';
+        slides[i].style.zIndex = '10000';
+      } else {
+        slides[i].style.display = 'none';
+      }
+    }
+
+    function restoreSlides() {
+      for (var i = 0; i < slides.length; i++) {
+        var s = savedStyles[i];
+        slides[i].style.display = s.display;
+        slides[i].style.visibility = s.visibility;
+        slides[i].style.opacity = s.opacity;
+        slides[i].style.transform = s.transform;
+        slides[i].style.position = s.position;
+        slides[i].style.top = s.top;
+        slides[i].style.left = s.left;
+        slides[i].style.width = s.width;
+        slides[i].style.zIndex = s.zIndex;
+      }
+    }
+
+    // Apply static freeze immediately after isolation to stop all CSS animations/transitions
+    var oldSlideFreeze = document.querySelector('style[data-bridge-capture-fix]');
+    if (oldSlideFreeze && oldSlideFreeze.parentNode) oldSlideFreeze.parentNode.removeChild(oldSlideFreeze);
+    var slideFreezeStyle = document.createElement('style');
+    slideFreezeStyle.setAttribute('data-bridge-capture-fix', '');
+    slideFreezeStyle.textContent = [
+      '*, *::before, *::after { transition: none !important; transition-duration: 0s !important; transition-delay: 0s !important; animation: none !important; }',
+      '[data-aos] { opacity: 1 !important; transform: none !important; visibility: visible !important; }',
+      '[data-sal] { opacity: 1 !important; transform: none !important; visibility: visible !important; }',
+      '.wow { visibility: visible !important; opacity: 1 !important; }',
+      '.animate__animated { opacity: 1 !important; }',
+    ].join('\\n');
+    document.head.appendChild(slideFreezeStyle);
+
+    // Hide fixed bottom navigation (deck-nav, progress bars, etc.) before capture
+    var fixedBottomHidden = hideFixedBottom();
+
+    // Wait for repaint before capturing (increased to 300ms for JS-driven transitions to settle)
+    setTimeout(function() {
+      // Force visible state on target slide's children (handles animation:none initial state)
+      var forceFixed = forceVisibleState(slides[idx]);
+      var clipTextFixed = fixClipTextForCapture();
+      var filterFixed = fixFilterForCapture();
+
+      function restoreCaptureFixes() {
+        if (slideFreezeStyle.parentNode) slideFreezeStyle.parentNode.removeChild(slideFreezeStyle);
+        restoreForceVisible(forceFixed);
+        restoreClipText(clipTextFixed);
+        restoreFilter(filterFixed);
+        restoreFixedBottom(fixedBottomHidden);
+      }
+
+      html2canvas(document.body, {
+        scale: scale,
+        useCORS: true,
+        logging: false,
+        x: 0,
+        y: 0,
+        width: document.documentElement.clientWidth,
+        height: document.documentElement.clientHeight,
+        scrollX: 0,
+        scrollY: 0
+      }).then(function(canvas) {
+        restoreCaptureFixes();
+        restoreSlides();
+        var dataUrl = canvas.toDataURL(format, quality);
+        window.parent.postMessage({
+          type: 'SECTION_CAPTURED',
+          payload: { index: idx, dataUrl: dataUrl }
+        }, '*');
+      }).catch(function(err) {
+        restoreCaptureFixes();
+        restoreSlides();
+        window.parent.postMessage({
+          type: 'SECTION_CAPTURED',
+          payload: { index: idx, dataUrl: null, error: err.message }
+        }, '*');
+      });
+    }, 300);
+  }
+
   function captureSectionInIframe(payload) {
     var idx = payload.index;
     var scale = payload.scale || 2;
     var format = payload.format || 'image/png';
     var quality = payload.quality || 0.92;
 
-    // Get section element by detection
+    if (typeof html2canvas === 'undefined') {
+      window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null, error: 'html2canvas not available' } }, '*');
+      return;
+    }
+
+    var pageType = detectPageTypeInIframe();
+
+    if (pageType === 'slides') {
+      captureSlideByIsolation(idx, scale, format, quality);
+      return;
+    }
+
+    // Scroll page: scroll to section first to trigger scroll-based animations,
+    // then capture after animations have settled.
     var sections = detectSectionsInIframe();
     if (idx >= sections.length) {
       window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
@@ -848,38 +1142,114 @@ export function getBridgeScript(): string {
     }
 
     var sec = sections[idx];
-    // Find the element at that position and height
-    // Use a wrapper approach: capture a specific region
-    if (typeof html2canvas === 'undefined') {
-      window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null, error: 'html2canvas not available' } }, '*');
-      return;
+
+    // Save current scroll state so we can restore it after capture
+    var savedScrollY = window.scrollY;
+    var savedContainer = null;
+    var savedContainerScrollTop = 0;
+
+    // Step 1: Scroll to section so Intersection Observer / scroll animations trigger
+    window.scrollTo(0, sec.top);
+    // Also scroll any full-height overflow container (container-based scroll pages)
+    var scrollEls = document.body.querySelectorAll('*');
+    for (var si = 0; si < scrollEls.length; si++) {
+      var sc = scrollEls[si];
+      var scCS = window.getComputedStyle(sc);
+      if ((scCS.overflowY === 'auto' || scCS.overflowY === 'scroll') &&
+          sc.clientHeight >= window.innerHeight * 0.8 &&
+          sc.scrollHeight > sc.clientHeight) {
+        savedContainer = sc;
+        savedContainerScrollTop = sc.scrollTop;
+        sc.scrollTop = sec.top;
+        break;
+      }
     }
 
-    // For scroll sections, we need to capture a region
-    // Strategy: find elements that match the section, or capture the body with clip
-    var targetEl = document.body;
-    var opts = {
-      scale: scale,
-      useCORS: true,
-      logging: false,
-      y: sec.top,
-      height: sec.height,
-      windowHeight: sec.height,
-      scrollY: -sec.top
-    };
+    // Step 2: Wait for IntersectionObserver callbacks to fire (scroll-based animations)
+    // Reduced from 600ms: animation:none CSS makes CSS animations complete instantly
+    setTimeout(function() {
+      // Hide fixed bottom navigation before capture
+      var fixedBottomHidden = hideFixedBottom();
 
-    html2canvas(targetEl, opts).then(function(canvas) {
-      var dataUrl = canvas.toDataURL(format, quality);
-      window.parent.postMessage({
-        type: 'SECTION_CAPTURED',
-        payload: { index: idx, dataUrl: dataUrl }
-      }, '*');
-    }).catch(function(err) {
-      window.parent.postMessage({
-        type: 'SECTION_CAPTURED',
-        payload: { index: idx, dataUrl: null, error: err.message }
-      }, '*');
-    });
+      // Clean up any leftover fix style from a previous failed capture
+      var oldFix = document.querySelector('style[data-bridge-capture-fix]');
+      if (oldFix && oldFix.parentNode) oldFix.parentNode.removeChild(oldFix);
+
+      // Step 3: Static freeze — disable ALL animations/transitions, force final visible state
+      var fixStyle = document.createElement('style');
+      fixStyle.setAttribute('data-bridge-capture-fix', '');
+      fixStyle.textContent = [
+        '*, *::before, *::after { transition: none !important; transition-duration: 0s !important; transition-delay: 0s !important; animation: none !important; }',
+        '[data-aos] { opacity: 1 !important; transform: none !important; visibility: visible !important; }',
+        '[data-sal] { opacity: 1 !important; transform: none !important; visibility: visible !important; }',
+        '.wow { visibility: visible !important; opacity: 1 !important; }',
+        '.animate__animated { opacity: 1 !important; }',
+      ].join('\\n');
+      document.head.appendChild(fixStyle);
+
+      // Section element for min-height fix (html2canvas flex centering bug)
+      var sectionEl = null;
+      var savedSecHeight = null;
+      var savedSecMinHeight = null;
+
+      function restoreAfterCapture(clipTextFixed, filterFixed, forceFixed) {
+        if (fixStyle.parentNode) fixStyle.parentNode.removeChild(fixStyle);
+        if (sectionEl) {
+          sectionEl.style.height = savedSecHeight;
+          sectionEl.style.minHeight = savedSecMinHeight;
+        }
+        restoreForceVisible(forceFixed);
+        restoreClipText(clipTextFixed);
+        restoreFilter(filterFixed);
+        restoreFixedBottom(fixedBottomHidden);
+        window.scrollTo(0, savedScrollY);
+        if (savedContainer) savedContainer.scrollTop = savedContainerScrollTop;
+      }
+
+      // Step 4: One rAF to let the freeze style apply before capture
+      requestAnimationFrame(function() {
+        // Fix min-height: html2canvas doesn't correctly apply flex align-items:center
+        // on elements with min-height. Convert to explicit height for correct centering.
+        var allSecs = document.querySelectorAll('section, article, .section, .page-section, [class*="section"]');
+        for (var si2 = 0; si2 < allSecs.length; si2++) {
+          var sEl = allSecs[si2];
+          var sRect = sEl.getBoundingClientRect();
+          var sDocTop = sRect.top + window.scrollY;
+          if (Math.abs(sDocTop - sec.top) < 20) {
+            sectionEl = sEl;
+            savedSecHeight = sEl.style.height;
+            savedSecMinHeight = sEl.style.minHeight;
+            sEl.style.height = sec.height + 'px';
+            sEl.style.minHeight = '0';
+            break;
+          }
+        }
+
+        // Force visible state: elements frozen at opacity:0 by animation:none → make them visible
+        var forceFixed = forceVisibleState(null);
+        var clipTextFixed = fixClipTextForCapture();
+        var filterFixed = fixFilterForCapture();
+
+        html2canvas(document.body, {
+          scale: scale,
+          useCORS: true,
+          logging: false,
+          x: 0,
+          y: sec.top,
+          width: document.documentElement.clientWidth,
+          height: sec.height,
+          scrollX: 0,
+          scrollY: 0,
+        }).then(function(canvas) {
+          restoreAfterCapture(clipTextFixed, filterFixed, forceFixed);
+          var dataUrl = canvas.toDataURL(format, quality);
+          window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: dataUrl } }, '*');
+        }).catch(function(err) {
+          restoreAfterCapture(clipTextFixed, filterFixed, forceFixed);
+          window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null, error: err.message } }, '*');
+        });
+      });
+    }, 300);
   }
 })();
 `;
