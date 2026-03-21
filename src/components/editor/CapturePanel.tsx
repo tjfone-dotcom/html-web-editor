@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { useEditorStore } from '../../store/editorStore';
+import { useT } from '../../i18n';
 import {
   requestSectionDetection,
   captureAllSections,
@@ -10,6 +11,7 @@ import {
 import type { SectionInfo } from '../../utils/sectionDetector';
 
 export default function CapturePanel() {
+  const t = useT();
   const fileName = useEditorStore((s) => s.fileName);
   const [format, setFormat] = useState<'png' | 'jpeg'>('jpeg');
   const [scale, setScale] = useState(2);
@@ -20,7 +22,10 @@ export default function CapturePanel() {
   const [error, setError] = useState<string | null>(null);
 
   const getIframe = useCallback((): HTMLIFrameElement | null => {
-    return document.querySelector('iframe[title="HTML 미리보기"]');
+    return document.querySelector('iframe[title="HTML 미리보기"]') ||
+           document.querySelector('iframe[title="HTML Preview"]') ||
+           document.querySelector('iframe[title="HTMLプレビュー"]') ||
+           document.querySelector('iframe[title="HTML预览"]');
   }, []);
 
   const handleReset = useCallback(() => {
@@ -31,24 +36,21 @@ export default function CapturePanel() {
   const handleDetect = useCallback(async () => {
     const iframe = getIframe();
     if (!iframe) {
-      setError('프리뷰 iframe을 찾을 수 없습니다. 프리뷰 모드에서 실행해주세요.');
+      setError(t('noIframe'));
       return;
     }
-
     setIsDetecting(true);
     setError(null);
     try {
       const detected = await requestSectionDetection(iframe);
-      if (detected.length === 0) {
-        setError('섹션을 감지할 수 없습니다.');
-      }
+      if (detected.length === 0) setError(t('cannotDetect'));
       setSections(detected);
     } catch {
-      setError('섹션 감지 중 오류가 발생했습니다.');
+      setError(t('detectError'));
     } finally {
       setIsDetecting(false);
     }
-  }, [getIframe]);
+  }, [getIframe, t]);
 
   const handleCapture = useCallback(async () => {
     const iframe = getIframe();
@@ -61,64 +63,49 @@ export default function CapturePanel() {
     try {
       const options: CaptureOptions = { format, scale, quality: 0.92 };
       const blobs = await captureAllSections(
-        iframe,
-        sections,
-        options,
+        iframe, sections, options,
         (current, total) => setProgress({ current, total })
       );
 
-      // Create ZIP
       const zip = new JSZip();
       const ext = format === 'jpeg' ? 'jpg' : 'png';
       let addedCount = 0;
-
       blobs.forEach((blob, i) => {
         if (blob) {
-          const name = `section-${String(i + 1).padStart(2, '0')}.${ext}`;
-          zip.file(name, blob);
+          zip.file(`section-${String(i + 1).padStart(2, '0')}.${ext}`, blob);
           addedCount++;
         }
       });
 
       if (addedCount === 0) {
-        setError('캡쳐에 실패했습니다. 다시 시도해주세요.');
+        setError(t('captureError'));
         return;
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const baseName = fileName
-        ? fileName.replace(/\.(html|htm)$/i, '')
-        : 'capture';
+      const baseName = fileName ? fileName.replace(/\.(html|htm)$/i, '') : 'capture';
       saveAs(zipBlob, `${baseName}_captures.zip`);
     } catch {
-      setError('캡쳐 중 오류가 발생했습니다.');
+      setError(t('captureInternalError'));
     } finally {
       setIsCapturing(false);
       setProgress({ current: 0, total: 0 });
     }
-  }, [getIframe, sections, format, scale, fileName]);
+  }, [getIframe, sections, format, scale, fileName, t]);
 
   return (
     <div className="border-t border-gray-700 pt-3 mt-3">
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-        멀티 캡쳐
+        {t('multiCapture')}
       </h3>
 
       {/* Format selection */}
       <div className="mb-3">
-        <label className="text-xs text-gray-400 block mb-1">출력 포맷</label>
+        <label className="text-xs text-gray-400 block mb-1">{t('outputFormat')}</label>
         <div className="flex gap-2">
           {(['jpeg', 'png'] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFormat(f)}
-              className={`px-3 py-1 text-xs rounded ${
-                format === f
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
+            <button key={f} type="button" onClick={() => setFormat(f)}
+              className={`px-3 py-1 text-xs rounded ${format === f ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
               {f === 'jpeg' ? 'JPG' : 'PNG'}
             </button>
           ))}
@@ -127,19 +114,11 @@ export default function CapturePanel() {
 
       {/* Scale selection */}
       <div className="mb-3">
-        <label className="text-xs text-gray-400 block mb-1">해상도</label>
+        <label className="text-xs text-gray-400 block mb-1">{t('resolution')}</label>
         <div className="flex gap-2">
           {[1, 2, 3].map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setScale(s)}
-              className={`px-3 py-1 text-xs rounded ${
-                scale === s
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
+            <button key={s} type="button" onClick={() => setScale(s)}
+              className={`px-3 py-1 text-xs rounded ${scale === s ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
               {s}x
             </button>
           ))}
@@ -148,40 +127,25 @@ export default function CapturePanel() {
 
       {/* Detect / Reset buttons */}
       <div className="flex gap-2 mb-2">
-        <button
-          type="button"
-          onClick={handleDetect}
-          disabled={isDetecting || isCapturing}
-          className="flex-1 py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isDetecting ? '감지 중...' : '섹션 감지'}
+        <button type="button" onClick={handleDetect} disabled={isDetecting || isCapturing}
+          className="flex-1 py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          {isDetecting ? t('detecting') : t('detectSections')}
         </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={isDetecting || isCapturing || sections.length === 0}
-          className="flex-1 py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          초기화
+        <button type="button" onClick={handleReset} disabled={isDetecting || isCapturing || sections.length === 0}
+          className="flex-1 py-2 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          {t('reset')}
         </button>
       </div>
 
       {/* Detected sections list */}
       {sections.length > 0 && (
         <div className="mb-3">
-          <p className="text-xs text-gray-400 mb-1">
-            감지된 섹션: {sections.length}개
-          </p>
+          <p className="text-xs text-gray-400 mb-1">{t('sectionsDetected', sections.length)}</p>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {sections.map((sec) => (
-              <div
-                key={sec.index}
-                className="flex items-center justify-between bg-gray-800 rounded px-2 py-1 text-xs"
-              >
+              <div key={sec.index} className="flex items-center justify-between bg-gray-800 rounded px-2 py-1 text-xs">
                 <span className="text-gray-300">{sec.label}</span>
-                <span className="text-gray-500">
-                  {Math.round(sec.height)}px
-                </span>
+                <span className="text-gray-500">{Math.round(sec.height)}px</span>
               </div>
             ))}
           </div>
@@ -190,34 +154,23 @@ export default function CapturePanel() {
 
       {/* Capture button */}
       {sections.length > 0 && (
-        <button
-          type="button"
-          onClick={handleCapture}
-          disabled={isCapturing}
-          className="w-full py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button type="button" onClick={handleCapture} disabled={isCapturing}
+          className="w-full py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
           {isCapturing
-            ? `캡쳐 중... (${progress.current}/${progress.total})`
-            : `${sections.length}개 섹션 캡쳐`}
+            ? t('captureProgress', progress.current, progress.total)
+            : t('captureNSections', sections.length)}
         </button>
       )}
 
       {/* Progress bar */}
       {isCapturing && progress.total > 0 && (
         <div className="mt-2 w-full bg-gray-700 rounded-full h-1.5">
-          <div
-            className="bg-blue-600 h-1.5 rounded-full transition-all"
-            style={{
-              width: `${(progress.current / progress.total) * 100}%`,
-            }}
-          />
+          <div className="bg-blue-600 h-1.5 rounded-full transition-all"
+            style={{ width: `${(progress.current / progress.total) * 100}%` }} />
         </div>
       )}
 
-      {/* Error message */}
-      {error && (
-        <p className="mt-2 text-xs text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
     </div>
   );
 }

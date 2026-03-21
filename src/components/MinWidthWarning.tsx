@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useT } from '../i18n';
 
 const MIN_WIDTH = 1024;
 
 export default function MinWidthWarning() {
+  const t = useT();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -33,11 +35,10 @@ export default function MinWidthWarning() {
           />
         </svg>
         <h2 className="text-lg font-semibold text-gray-800 mb-2">
-          화면이 너무 좁습니다
+          {t('screenTooNarrow')}
         </h2>
         <p className="text-sm text-gray-500">
-          이 에디터는 최소 1024px 너비의 화면에서 사용할 수 있습니다.
-          브라우저 창을 넓혀 주세요.
+          {t('screenTooNarrowMsg')}
         </p>
       </div>
     </div>

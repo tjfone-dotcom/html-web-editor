@@ -1,3 +1,6 @@
+/** Supported UI languages */
+export type SupportedLocale = 'en' | 'ko' | 'ja' | 'zh';
+
 /** Supported element types that can be edited */
 export type ElementType =
   | 'text'
@@ -110,6 +113,8 @@ export interface EditorState {
   currentSlideIndex: number;
   /** Target slide index for undo/redo navigation */
   undoRedoSlideIndex: number | null;
+  /** Current UI language */
+  locale: SupportedLocale;
 
   // Actions
   setFileName: (name: string | null) => void;
@@ -129,4 +134,5 @@ export interface EditorState {
   pushHistory: (entry: Omit<HistoryEntry, 'timestamp'>) => void;
   resetEditor: () => void;
   loadFile: (content: string, fileName: string) => void;
+  setLocale: (locale: SupportedLocale) => void;
 }

@@ -1,17 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useEditorStore } from '../../../store/editorStore';
 import { useIframeBridge } from '../../../hooks/useIframeBridge';
+import { useT } from '../../../i18n';
 import ColorPicker from '../controls/ColorPicker';
 import Slider from '../controls/Slider';
 import FontSelector from '../controls/FontSelector';
 
 const FONT_WEIGHTS = ['100', '200', '300', '400', '500', '600', '700', '800', '900'];
-const TEXT_ALIGNS = [
-  { value: 'left', label: '좌' },
-  { value: 'center', label: '중' },
-  { value: 'right', label: '우' },
-  { value: 'justify', label: '균' },
-];
 
 /** Parse a CSS px value like "16px" to a number */
 function parsePx(val: string): number {
@@ -31,6 +26,7 @@ function parseLineHeight(val: string, fontSize: number): number {
 }
 
 export default function TextProperties() {
+  const t = useT();
   const selectedElement = useEditorStore((s) => s.selectedElement);
   const { sendStyleUpdate, sendTextUpdate } = useIframeBridge();
 
@@ -121,11 +117,18 @@ export default function TextProperties() {
     applyStyle({ 'letter-spacing': `${val}px` });
   };
 
+  const TEXT_ALIGNS = [
+    { value: 'left',    label: t('alignLeft') },
+    { value: 'center',  label: t('alignCenter') },
+    { value: 'right',   label: t('alignRight') },
+    { value: 'justify', label: t('alignJustify') },
+  ];
+
   return (
     <div className="space-y-3">
       {/* Text content */}
       <div>
-        <label className="text-xs text-gray-400 block mb-1">텍스트 내용</label>
+        <label className="text-xs text-gray-400 block mb-1">{t('textContent')}</label>
         <textarea
           value={textContent}
           onChange={(e) => handleTextChange(e.target.value)}
@@ -136,7 +139,7 @@ export default function TextProperties() {
 
       {/* Font size */}
       <Slider
-        label="글자 크기"
+        label={t('fontSize')}
         value={fontSize}
         onChange={handleFontSizeChange}
         min={8}
@@ -150,7 +153,7 @@ export default function TextProperties() {
 
       {/* Font weight */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-20 shrink-0">굵기</label>
+        <label className="text-xs text-gray-400 w-20 shrink-0">{t('fontWeight')}</label>
         <select
           value={fontWeight}
           onChange={(e) => handleFontWeightChange(e.target.value)}
@@ -166,7 +169,7 @@ export default function TextProperties() {
 
       {/* Font style toggle */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-20 shrink-0">스타일</label>
+        <label className="text-xs text-gray-400 w-20 shrink-0">{t('style')}</label>
         <button
           type="button"
           onClick={handleFontStyleToggle}
@@ -176,16 +179,16 @@ export default function TextProperties() {
               : 'border-gray-600 text-gray-400'
           }`}
         >
-          <span style={{ fontStyle: 'italic' }}>I</span> 기울임
+          {t('italic')}
         </button>
       </div>
 
       {/* Color */}
-      <ColorPicker label="글자 색" value={color} onChange={handleColorChange} />
+      <ColorPicker label={t('textColor')} value={color} onChange={handleColorChange} />
 
       {/* Text align */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-20 shrink-0">정렬</label>
+        <label className="text-xs text-gray-400 w-20 shrink-0">{t('alignment')}</label>
         <div className="flex gap-0.5">
           {TEXT_ALIGNS.map((a) => (
             <button
@@ -206,7 +209,7 @@ export default function TextProperties() {
 
       {/* Line height */}
       <Slider
-        label="줄 높이"
+        label={t('lineHeight')}
         value={lineHeight}
         onChange={handleLineHeightChange}
         min={0.5}
@@ -216,7 +219,7 @@ export default function TextProperties() {
 
       {/* Letter spacing */}
       <Slider
-        label="자간"
+        label={t('letterSpacing')}
         value={letterSpacing}
         onChange={handleLetterSpacingChange}
         min={-5}

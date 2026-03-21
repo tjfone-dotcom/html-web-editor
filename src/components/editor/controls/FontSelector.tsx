@@ -1,3 +1,5 @@
+import { useT } from '../../../i18n';
+
 interface FontSelectorProps {
   value: string;
   onChange: (font: string) => void;
@@ -19,12 +21,12 @@ const FONTS = [
 ];
 
 export default function FontSelector({ value, onChange }: FontSelectorProps) {
-  // Normalize value - strip quotes
+  const t = useT();
   const normalized = value.replace(/["']/g, '').split(',')[0].trim();
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-xs text-gray-400 w-20 shrink-0">글꼴</label>
+      <label className="text-xs text-gray-400 w-20 shrink-0">{t('font')}</label>
       <select
         value={normalized}
         onChange={(e) => onChange(e.target.value)}

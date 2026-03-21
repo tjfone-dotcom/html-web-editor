@@ -1,14 +1,6 @@
 import { useEditorStore } from '../../store/editorStore';
+import { useT } from '../../i18n';
 import type { ElementType } from '../../types/editor';
-
-const typeLabels: Record<ElementType, string> = {
-  text: '텍스트',
-  button: '버튼',
-  box: '박스',
-  image: '이미지',
-  line: '구분선',
-  unsupported: '미지원',
-};
 
 const typeBadgeColors: Record<ElementType, string> = {
   text: 'bg-blue-600',
@@ -28,13 +20,23 @@ function navigateDown() {
 }
 
 export default function ElementInfo() {
+  const t = useT();
   const selectedElement = useEditorStore((s) => s.selectedElement);
+
+  const typeLabels: Record<ElementType, string> = {
+    text: t('typeText'),
+    button: t('typeButton'),
+    box: t('typeBox'),
+    image: t('typeImage'),
+    line: t('typeLine'),
+    unsupported: t('typeUnsupported'),
+  };
 
   if (!selectedElement) {
     return (
       <div className="p-4">
         <p className="text-xs text-gray-500">
-          요소를 클릭하여 선택하세요
+          {t('clickToSelect')}
         </p>
       </div>
     );
@@ -56,14 +58,14 @@ export default function ElementInfo() {
           <button
             onClick={navigateUp}
             className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-xs"
-            title="부모 요소 선택 (▲)"
+            title={t('selectParent')}
           >
             ▲
           </button>
           <button
             onClick={navigateDown}
             className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-xs"
-            title="첫 번째 자식 선택 (▼)"
+            title={t('selectChild')}
           >
             ▼
           </button>
@@ -77,7 +79,7 @@ export default function ElementInfo() {
       )}
       {className && (
         <div className="text-xs text-gray-400">
-          <span className="text-gray-500">클래스: </span>
+          <span className="text-gray-500">Class: </span>
           <span className="text-blue-400">.{className.trim().split(/\s+/).join(' .')}</span>
         </div>
       )}

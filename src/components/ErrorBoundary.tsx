@@ -1,7 +1,12 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
+import { useT } from '../i18n';
 
 interface Props {
   children: ReactNode;
+}
+
+interface InnerProps extends Props {
+  t: (key: string) => string;
 }
 
 interface State {
@@ -9,8 +14,8 @@ interface State {
   error: Error | null;
 }
 
-export default class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+class ErrorBoundaryClass extends Component<InnerProps, State> {
+  constructor(props: InnerProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -28,6 +33,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
+    const { t } = this.props;
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-screen bg-gray-50 p-8">
@@ -46,16 +52,16 @@ export default class ErrorBoundary extends Component<Props, State> {
               />
             </svg>
             <h2 className="text-lg font-semibold text-gray-800 mb-2">
-              오류가 발생했습니다
+              {t('errorOccurred')}
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              {this.state.error?.message || '알 수 없는 오류'}
+              {this.state.error?.message || t('unknownError')}
             </p>
             <button
               onClick={this.handleReset}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 cursor-pointer"
             >
-              다시 시도
+              {t('tryAgain')}
             </button>
           </div>
         </div>
@@ -64,4 +70,9 @@ export default class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+export default function ErrorBoundary({ children }: Props) {
+  const t = useT();
+  return <ErrorBoundaryClass t={t as (key: string) => string}>{children}</ErrorBoundaryClass>;
 }

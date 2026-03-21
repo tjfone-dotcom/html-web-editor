@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, type SyntheticEvent } from 'react';
 import { useEditorStore } from '../../store/editorStore';
+import { useT } from '../../i18n';
 import { getBridgeScript } from '../../bridge/bridge';
 import { lastCursorLine, findHtmlContextAtLine } from '../../utils/codeSync';
 
@@ -31,6 +32,7 @@ function getNodePath(el: Element, root: Element): number[] {
 }
 
 export default function HtmlPreview() {
+  const t = useT();
   const htmlContent = useEditorStore((s) => s.htmlContent);
   const setSelectedElement = useEditorStore((s) => s.setSelectedElement);
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
@@ -335,7 +337,7 @@ export default function HtmlPreview() {
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
           <div className="flex flex-col items-center gap-2">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-gray-500">로딩 중...</span>
+            <span className="text-xs text-gray-500">{t('loading')}</span>
           </div>
         </div>
       )}
@@ -352,7 +354,7 @@ export default function HtmlPreview() {
           ref={iframeRef}
           src={blobUrl}
           sandbox="allow-scripts allow-same-origin"
-          title="HTML 미리보기"
+          title={t('htmlPreview')}
           className="w-full h-full border-0"
           onLoad={handleIframeLoad}
         />

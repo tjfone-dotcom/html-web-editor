@@ -1,4 +1,5 @@
 import { useEditorStore } from '../../store/editorStore';
+import { useT } from '../../i18n';
 import type { ViewMode } from '../../types/editor';
 import {
   monacoEditorInstance,
@@ -7,14 +8,15 @@ import {
   pendingCodeScroll,
 } from '../../utils/codeSync';
 
-const tabs: { mode: ViewMode; label: string }[] = [
-  { mode: 'preview', label: '프리뷰' },
-  { mode: 'code', label: '코드' },
-];
-
 export default function ViewToggle() {
+  const t = useT();
   const viewMode = useEditorStore((s) => s.viewMode);
   const setViewMode = useEditorStore((s) => s.setViewMode);
+
+  const tabs: { mode: ViewMode; label: string }[] = [
+    { mode: 'preview', label: t('previewMode') },
+    { mode: 'code',    label: t('codeMode') },
+  ];
 
   return (
     <div className="flex gap-1 bg-gray-200 rounded-md p-0.5">
@@ -25,12 +27,10 @@ export default function ViewToggle() {
             if (mode === viewMode) return;
 
             if (mode === 'preview') {
-              // Code→Preview: save Monaco cursor line before switching
               lastCursorLine.value = monacoEditorInstance?.getPosition()?.lineNumber ?? null;
             }
 
             if (mode === 'code') {
-              // Preview→Code: save scroll target line (CodeEditor handles the actual scroll)
               const { selectedElement, htmlContent } = useEditorStore.getState();
               if (selectedElement && htmlContent) {
                 pendingCodeScroll.line = findLineForSelectedElement(htmlContent, selectedElement);
@@ -39,7 +39,6 @@ export default function ViewToggle() {
               }
             }
 
-            // Switch view — no Monaco manipulation here
             setViewMode(mode);
           }}
           className={`

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML 편집기 사용 설명서</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --bg2: #1a1d27;
+      --bg3: #23273a;
+      --border: #2e3347;
+      --text: #e2e5f0;
+      --muted: #7c83a0;
+      --accent: #4f8ef7;
+      --accent2: #7c5ef7;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --radius: 8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 28px 0 40px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 0 20px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+    }
+    .sidebar-logo span { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; display: block; margin-top: 2px; font-size: 11px; }
+    .nav-group { margin-bottom: 4px; }
+    .nav-label {
+      padding: 6px 20px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+    .nav-link {
+      display: block;
+      padding: 7px 20px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13.5px;
+      border-left: 2px solid transparent;
+      transition: background .15s, border-color .15s;
+    }
+    .nav-link:hover { background: var(--bg3); border-left-color: var(--accent); }
+
+    /* ── Content ── */
+    .content { flex: 1; min-width: 0; padding: 48px 56px 80px; max-width: 820px; }
+
+    h1 { font-size: 30px; font-weight: 700; margin-bottom: 10px; }
+    h1 .sub { font-size: 16px; color: var(--muted); font-weight: 400; margin-top: 6px; display: block; }
+    h2 {
+      font-size: 20px; font-weight: 700;
+      margin: 52px 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      scroll-margin-top: 32px;
+    }
+    h3 { font-size: 15.5px; font-weight: 600; margin: 28px 0 10px; color: var(--accent); }
+    p { margin-bottom: 12px; color: #c8ccdf; }
+    ul, ol { padding-left: 20px; margin-bottom: 12px; color: #c8ccdf; }
+    li { margin-bottom: 5px; }
+    strong { color: var(--text); font-weight: 600; }
+    code {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13px;
+      font-family: 'SF Mono', Consolas, monospace;
+      color: #a5b4fc;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #1e2340 0%, #16192e 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 40px;
+    }
+    .hero p { color: var(--muted); margin: 0; font-size: 14px; }
+
+    /* ── Layout diagram ── */
+    .layout-diagram {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 16px 0 24px;
+    }
+    .ld-header {
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    .ld-header b { color: var(--text); }
+    .ld-body { display: flex; height: 130px; }
+    .ld-left {
+      width: 160px;
+      flex-shrink: 0;
+      background: #1a2035;
+      border-right: 1px solid var(--border);
+      padding: 12px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .ld-left b { color: #818cf8; display: block; margin-bottom: 6px; font-size: 12px; }
+    .ld-main { flex: 1; background: var(--bg2); padding: 12px 16px; font-size: 11px; color: var(--muted); }
+    .ld-main b { color: #34d399; display: block; margin-bottom: 6px; font-size: 12px; }
+    .ld-status {
+      height: 28px;
+      background: var(--bg3);
+      border-top: 1px solid var(--border);
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── Step cards ── */
+    .steps { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 24px; }
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .step-num {
+      width: 28px; height: 28px; flex-shrink: 0;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+    }
+    .step-body { font-size: 14px; color: #c8ccdf; line-height: 1.6; }
+    .step-body strong { color: var(--text); }
+
+    /* ── Feature cards ── */
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 24px; }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .card-icon { font-size: 20px; margin-bottom: 8px; }
+    .card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .card p { font-size: 13px; color: var(--muted); margin: 0; }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 13.5px;
+    }
+    th {
+      background: var(--bg3);
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: #c8ccdf;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-blue  { background: #1e3a8a; color: #93c5fd; }
+    .badge-green { background: #14532d; color: #86efac; }
+    .badge-gray  { background: #374151; color: #d1d5db; }
+    .badge-purple{ background: #4c1d95; color: #c4b5fd; }
+    .badge-yellow{ background: #78350f; color: #fde68a; }
+    .badge-red   { background: #7f1d1d; color: #fca5a5; }
+
+    /* ── Shortcut ── */
+    kbd {
+      display: inline-block;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-family: 'SF Mono', Consolas, monospace;
+      color: var(--text);
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    /* ── Note / Warning ── */
+    .note {
+      background: rgba(79,142,247,.08);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      color: #c8ccdf;
+      margin: 12px 0 20px;
+    }
+    .warn {
+      background: rgba(251,191,36,.06);
+      border-left: 3px solid var(--yellow);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      color: #c8ccdf;
+      margin: 12px 0 20px;
+    }
+
+    /* ── Property group ── */
+    .prop-group {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 12px 0 20px;
+    }
+    .prop-group-header {
+      background: var(--bg3);
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      border-bottom: 1px solid var(--border);
+    }
+    .prop-row {
+      display: flex;
+      gap: 12px;
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+    .prop-row:last-child { border-bottom: none; }
+    .prop-name { width: 130px; flex-shrink: 0; color: var(--muted); font-size: 13px; }
+    .prop-desc { color: #c8ccdf; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .content { padding: 32px 20px 60px; }
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">HTML 편집기<span>사용 설명서</span></div>
+
+    <div class="nav-group">
+      <div class="nav-label">시작하기</div>
+      <a class="nav-link" href="#overview">개요</a>
+      <a class="nav-link" href="#quickstart">빠른 시작</a>
+      <a class="nav-link" href="#layout">화면 구성</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">핵심 기능</div>
+      <a class="nav-link" href="#upload">파일 열기</a>
+      <a class="nav-link" href="#select">요소 선택</a>
+      <a class="nav-link" href="#edit">속성 편집</a>
+      <a class="nav-link" href="#viewmode">뷰 모드</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">고급 기능</div>
+      <a class="nav-link" href="#class-apply">클래스 일괄 적용</a>
+      <a class="nav-link" href="#undo">실행 취소/다시 실행</a>
+      <a class="nav-link" href="#capture">이미지 캡쳐</a>
+      <a class="nav-link" href="#save">저장</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">참고</div>
+      <a class="nav-link" href="#elements">요소 유형</a>
+      <a class="nav-link" href="#shortcuts">단축키</a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="content">
+
+    <h1>HTML 편집기 사용 설명서<span class="sub">비개발자를 위한 시각적 HTML 편집 도구</span></h1>
+
+    <div class="hero">
+      <p>HTML 편집기는 코드를 몰라도 HTML 파일을 시각적으로 수정할 수 있는 도구입니다. 요소를 클릭하여 선택하고, 왼쪽 패널에서 색상·크기·여백 등을 조정하면 즉시 미리보기에 반영됩니다.</p>
+    </div>
+
+    <!-- ────────── 개요 ────────── -->
+    <h2 id="overview">개요</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <h4>시각적 편집</h4>
+        <p>요소를 클릭하면 해당 속성을 패널에서 즉시 편집할 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h4>실시간 미리보기</h4>
+        <p>변경 사항이 바로 미리보기에 반영됩니다. 코드 뷰로 전환하여 직접 수정도 가능합니다.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">↩️</div>
+        <h4>실행 취소/다시 실행</h4>
+        <p>최대 50단계 이력 관리로 실수를 쉽게 되돌릴 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📸</div>
+        <h4>이미지 캡쳐</h4>
+        <p>페이지 섹션을 자동 감지하여 고해상도 이미지로 내보낼 수 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- ────────── 빠른 시작 ────────── -->
+    <h2 id="quickstart">빠른 시작</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><strong>파일 열기</strong> — 왼쪽 패널의 업로드 영역에 <code>.html</code> 파일을 드래그하거나 클릭하여 선택합니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><strong>요소 선택</strong> — 미리보기에서 편집할 요소를 클릭합니다. 왼쪽 패널에 해당 속성이 표시됩니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><strong>속성 편집</strong> — 색상, 크기, 텍스트 등 원하는 속성을 조정합니다. 변경 사항이 즉시 미리보기에 반영됩니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body"><strong>저장</strong> — 상단 <strong>저장</strong> 버튼(<kbd>Ctrl</kbd>+<kbd>S</kbd>)을 클릭하여 수정된 HTML 파일을 다운로드합니다.</div>
+      </div>
+    </div>
+
+    <!-- ────────── 화면 구성 ────────── -->
+    <h2 id="layout">화면 구성</h2>
+
+    <div class="layout-diagram">
+      <div class="ld-header">
+        <span><b>상단 툴바</b> — 파일명 · 실행 취소 · 다시 실행 · 원본 복원 · 저장</span>
+      </div>
+      <div class="ld-body">
+        <div class="ld-left">
+          <b>왼쪽 패널 (380px)</b>
+          파일 업로드<br>요소 정보<br>속성 편집<br>이미지 캡쳐
+        </div>
+        <div class="ld-main">
+          <b>오른쪽 패널 (나머지 영역)</b>
+          프리뷰 / 코드 뷰 전환<br><br>
+          HTML 렌더링 미리보기<br>또는 Monaco 코드 에디터
+        </div>
+      </div>
+      <div class="ld-status">하단 상태바 — 선택된 요소의 부모 경로 표시 (예: body &gt; div &gt; p)</div>
+    </div>
+
+    <table>
+      <thead><tr><th>영역</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><strong>상단 툴바</strong></td><td>파일명 표시, 실행 취소/다시 실행, 원본 복원, 저장 버튼</td></tr>
+        <tr><td><strong>왼쪽 패널</strong></td><td>파일 업로드, 선택된 요소 정보, 속성 편집기, 이미지 캡쳐</td></tr>
+        <tr><td><strong>오른쪽 패널</strong></td><td>프리뷰(기본) 또는 코드 뷰 전환 가능</td></tr>
+        <tr><td><strong>하단 상태바</strong></td><td>현재 선택된 요소의 DOM 경로 표시</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ────────── 파일 열기 ────────── -->
+    <h2 id="upload">파일 열기</h2>
+    <p>왼쪽 패널 상단의 업로드 영역을 통해 파일을 불러옵니다.</p>
+    <ul>
+      <li><strong>드래그 앤 드롭</strong> — <code>.html</code>, <code>.htm</code> 파일을 영역 위로 드래그합니다.</li>
+      <li><strong>클릭하여 찾아보기</strong> — 업로드 영역 또는 <strong>파일 변경</strong> 버튼을 클릭합니다.</li>
+      <li><strong>붙여넣기</strong> — 파일을 클립보드에 복사한 뒤 붙여넣습니다.</li>
+    </ul>
+    <div class="warn">파일 크기는 최대 <strong>10MB</strong>입니다. 이미 파일이 열려 있을 때 새 파일을 불러오면 기존 편집 내용이 초기화됩니다.</div>
+
+    <!-- ────────── 요소 선택 ────────── -->
+    <h2 id="select">요소 선택</h2>
+    <p>미리보기에서 편집할 요소를 클릭합니다. 선택된 요소는 강조 표시되며 왼쪽 패널에 상세 정보가 나타납니다.</p>
+
+    <h3>요소 정보 패널</h3>
+    <div class="prop-group">
+      <div class="prop-group-header">표시 항목</div>
+      <div class="prop-row"><div class="prop-name">태그</div><div class="prop-desc">선택된 요소의 HTML 태그 (예: <code>&lt;div&gt;</code>)</div></div>
+      <div class="prop-row"><div class="prop-name">유형 뱃지</div><div class="prop-desc">텍스트 · 버튼 · 박스 · 이미지 · 선 · 미지원 중 하나</div></div>
+      <div class="prop-row"><div class="prop-name">ID</div><div class="prop-desc">요소의 <code>id</code> 속성 (노란색으로 표시)</div></div>
+      <div class="prop-row"><div class="prop-name">클래스</div><div class="prop-desc">적용된 CSS 클래스 목록 (파란색으로 표시)</div></div>
+    </div>
+
+    <h3>요소 탐색 버튼</h3>
+    <ul>
+      <li><strong>▲ 위쪽 화살표</strong> — 부모 요소로 선택 이동</li>
+      <li><strong>▼ 아래쪽 화살표</strong> — 첫 번째 자식 요소로 선택 이동</li>
+    </ul>
+
+    <!-- ────────── 속성 편집 ────────── -->
+    <h2 id="edit">속성 편집</h2>
+    <p>선택된 요소의 유형에 따라 편집 가능한 속성이 다르게 표시됩니다.</p>
+
+    <h3>텍스트 요소 (<code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1&gt;</code> 등)</h3>
+    <div class="prop-group">
+      <div class="prop-row"><div class="prop-name">텍스트 내용</div><div class="prop-desc">직접 텍스트를 입력하여 수정</div></div>
+      <div class="prop-row"><div class="prop-name">글자 크기</div><div class="prop-desc">8 ~ 120px 슬라이더</div></div>
+      <div class="prop-row"><div class="prop-name">폰트</div><div class="prop-desc">폰트 패밀리 드롭다운 선택</div></div>
+      <div class="prop-row"><div class="prop-name">굵기</div><div class="prop-desc">100 ~ 900 (Thin ~ Black)</div></div>
+      <div class="prop-row"><div class="prop-name">이탤릭</div><div class="prop-desc">기울임 토글 버튼</div></div>
+      <div class="prop-row"><div class="prop-name">글자 색</div><div class="prop-desc">컬러 피커</div></div>
+      <div class="prop-row"><div class="prop-name">정렬</div><div class="prop-desc">왼쪽 / 가운데 / 오른쪽 / 양쪽</div></div>
+      <div class="prop-row"><div class="prop-name">줄 높이</div><div class="prop-desc">0.5 ~ 3x 슬라이더</div></div>
+      <div class="prop-row"><div class="prop-name">자간</div><div class="prop-desc">-5 ~ 20px 슬라이더</div></div>
+    </div>
+
+    <h3>버튼 요소 (<code>&lt;button&gt;</code>)</h3>
+    <div class="prop-group">
+      <div class="prop-row"><div class="prop-name">텍스트 내용</div><div class="prop-desc">버튼 레이블 수정</div></div>
+      <div class="prop-row"><div class="prop-name">배경색 / 글자 색</div><div class="prop-desc">각각 컬러 피커</div></div>
+      <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px (테두리 반경)</div></div>
+      <div class="prop-row"><div class="prop-name">테두리</div><div class="prop-desc">두께 · 스타일 · 색상</div></div>
+      <div class="prop-row"><div class="prop-name">안쪽 여백</div><div class="prop-desc">상/우/하/좌 패딩 개별 조정</div></div>
+      <div class="prop-row"><div class="prop-name">글자 크기</div><div class="prop-desc">8 ~ 72px</div></div>
+    </div>
+
+    <h3>박스 요소 (<code>&lt;div&gt;</code>, <code>&lt;section&gt;</code> 등)</h3>
+    <div class="prop-group">
+      <div class="prop-row"><div class="prop-name">배경색</div><div class="prop-desc">컬러 피커</div></div>
+      <div class="prop-row"><div class="prop-name">배경 이미지</div><div class="prop-desc">이미지 URL 직접 입력</div></div>
+      <div class="prop-row"><div class="prop-name">테두리</div><div class="prop-desc">두께 · 스타일 · 색상</div></div>
+      <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px</div></div>
+      <div class="prop-row"><div class="prop-name">안쪽 여백</div><div class="prop-desc">상/우/하/좌 패딩</div></div>
+      <div class="prop-row"><div class="prop-name">바깥 여백</div><div class="prop-desc">상/우/하/좌 마진</div></div>
+      <div class="prop-row"><div class="prop-name">그림자</div><div class="prop-desc">X · Y 오프셋, 흐림, 확산, 색상</div></div>
+    </div>
+
+    <h3>이미지 요소 (<code>&lt;img&gt;</code>)</h3>
+    <div class="prop-group">
+      <div class="prop-row"><div class="prop-name">이미지 파일</div><div class="prop-desc">파일 선택 버튼으로 교체 (데이터 URI로 삽입)</div></div>
+      <div class="prop-row"><div class="prop-name">너비 / 높이</div><div class="prop-desc">0 ~ 2000px (비율 고정 토글 있음)</div></div>
+      <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px</div></div>
+      <div class="prop-row"><div class="prop-name">투명도</div><div class="prop-desc">0 ~ 1</div></div>
+      <div class="prop-row"><div class="prop-name">맞춤</div><div class="prop-desc">cover / contain / fill / none / scale-down</div></div>
+    </div>
+
+    <h3>선 요소 (<code>&lt;hr&gt;</code>)</h3>
+    <div class="prop-group">
+      <div class="prop-row"><div class="prop-name">선 색상</div><div class="prop-desc">컬러 피커</div></div>
+      <div class="prop-row"><div class="prop-name">선 두께</div><div class="prop-desc">0 ~ 20px</div></div>
+      <div class="prop-row"><div class="prop-name">선 스타일</div><div class="prop-desc">실선 / 파선 / 점선</div></div>
+      <div class="prop-row"><div class="prop-name">너비</div><div class="prop-desc">0 ~ 100%</div></div>
+    </div>
+
+    <!-- ────────── 뷰 모드 ────────── -->
+    <h2 id="viewmode">뷰 모드 전환</h2>
+    <p>오른쪽 패널 상단의 <strong>프리뷰 / 코드</strong> 버튼으로 뷰를 전환합니다.</p>
+
+    <table>
+      <thead><tr><th>모드</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>프리뷰</strong></td>
+          <td>HTML이 렌더링된 실제 화면. 요소를 클릭하여 선택 및 편집. 슬라이드덱·인터랙티브 요소도 동작.</td>
+        </tr>
+        <tr>
+          <td><strong>코드</strong></td>
+          <td>Monaco 코드 에디터(VS Code 방식). HTML 구문 강조, 자동 완성. 코드 수정 후 프리뷰로 전환 시 자동 동기화.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">프리뷰에서 요소를 선택한 뒤 코드 뷰로 전환하면 해당 요소가 있는 코드 라인으로 자동 스크롤되고 하이라이트됩니다.</div>
+
+    <!-- ────────── 클래스 일괄 적용 ────────── -->
+    <h2 id="class-apply">클래스 일괄 적용</h2>
+    <p>같은 클래스를 가진 모든 요소에 속성 변경을 한 번에 적용하는 기능입니다.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">클래스가 있는 요소를 선택합니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">왼쪽 패널의 <strong>"같은 클래스에 모두 적용"</strong> 체크박스를 활성화합니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">드롭다운에서 편집할 클래스를 선택합니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">속성을 변경하면 해당 클래스를 가진 <strong>모든 요소</strong>에 동시 적용됩니다.</div>
+      </div>
+    </div>
+
+    <!-- ────────── 실행 취소 ────────── -->
+    <h2 id="undo">실행 취소 / 다시 실행</h2>
+    <p>상단 툴바 또는 단축키로 변경 이력을 탐색합니다. 최대 <strong>50단계</strong>까지 이력이 유지됩니다.</p>
+
+    <table>
+      <thead><tr><th>버튼</th><th>단축키</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><strong>실행 취소</strong></td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>직전 변경을 되돌립니다.</td></tr>
+        <tr><td><strong>다시 실행</strong></td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> 또는 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>취소한 변경을 다시 적용합니다.</td></tr>
+        <tr><td><strong>원본 복원</strong></td><td>—</td><td>파일을 처음 열었을 때 상태로 완전히 되돌립니다.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">슬라이드덱 HTML에서 실행 취소/다시 실행 시, 변경했던 슬라이드 페이지로 자동 이동합니다.</div>
+
+    <!-- ────────── 이미지 캡쳐 ────────── -->
+    <h2 id="capture">이미지 캡쳐</h2>
+    <p>페이지를 섹션별로 나눠 고해상도 이미지로 내보냅니다. 왼쪽 패널 하단 <strong>캡쳐</strong> 영역에서 사용합니다.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><strong>형식</strong>(JPG / PNG)과 <strong>해상도</strong>(1x / 2x / 3x)를 선택합니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><strong>섹션 감지</strong> 버튼을 클릭합니다. 페이지의 구분 섹션이 자동으로 감지됩니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">감지된 섹션 목록과 높이를 확인합니다. 원하지 않을 경우 <strong>초기화</strong> 후 다시 감지합니다.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body"><strong>캡쳐</strong> 버튼을 클릭합니다. 진행바가 표시되고 완료되면 ZIP 파일이 다운로드됩니다.</div>
+      </div>
+    </div>
+
+    <div class="warn">캡쳐는 <strong>프리뷰 모드</strong>에서만 작동합니다. 코드 뷰에서는 먼저 프리뷰로 전환하세요.</div>
+
+    <!-- ────────── 저장 ────────── -->
+    <h2 id="save">저장</h2>
+    <p>상단 <strong>저장</strong> 버튼 또는 <kbd>Ctrl</kbd>+<kbd>S</kbd>를 누르면 수정된 HTML 파일이 컴퓨터에 다운로드됩니다.</p>
+    <div class="warn"><strong>자동 저장은 없습니다.</strong> 중요한 변경 후에는 수동으로 저장하세요. 브라우저를 닫으면 저장하지 않은 변경 사항이 사라집니다.</div>
+
+    <!-- ────────── 요소 유형 ────────── -->
+    <h2 id="elements">요소 유형 참고</h2>
+    <table>
+      <thead><tr><th>유형</th><th>뱃지</th><th>해당 태그</th><th>편집 가능</th></tr></thead>
+      <tbody>
+        <tr><td>텍스트</td><td><span class="badge badge-blue">텍스트</span></td><td><code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1~6&gt;</code>, <code>&lt;li&gt;</code> 등</td><td>✅</td></tr>
+        <tr><td>버튼</td><td><span class="badge badge-green">버튼</span></td><td><code>&lt;button&gt;</code>, <code>&lt;a&gt;</code></td><td>✅</td></tr>
+        <tr><td>박스</td><td><span class="badge badge-gray">박스</span></td><td><code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code> 등</td><td>✅</td></tr>
+        <tr><td>이미지</td><td><span class="badge badge-purple">이미지</span></td><td><code>&lt;img&gt;</code></td><td>✅</td></tr>
+        <tr><td>선</td><td><span class="badge badge-yellow">선</span></td><td><code>&lt;hr&gt;</code></td><td>✅</td></tr>
+        <tr><td>미지원</td><td><span class="badge badge-red">미지원</span></td><td>복잡한 인터랙티브 요소</td><td>❌</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ────────── 단축키 ────────── -->
+    <h2 id="shortcuts">단축키</h2>
+    <table>
+      <thead><tr><th>단축키</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td><td>실행 취소</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>다시 실행</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>⌘</kbd>+<kbd>S</kbd></td><td>HTML 파일 저장</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">코드 뷰(Monaco 에디터)가 포커스된 상태에서는 단축키가 에디터 내부 기능으로 동작합니다. 에디터 밖을 클릭한 후 사용하세요.</div>
+
+  </main>
+</div>
+
+</body>
+</html>

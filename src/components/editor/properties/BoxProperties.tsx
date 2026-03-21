@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useEditorStore } from '../../../store/editorStore';
 import { useIframeBridge } from '../../../hooks/useIframeBridge';
+import { useT } from '../../../i18n';
 import ColorPicker from '../controls/ColorPicker';
 import Slider from '../controls/Slider';
 import SpacingControl from '../controls/SpacingControl';
@@ -54,6 +55,7 @@ function parseBoxShadow(val: string): { x: number; y: number; blur: number; spre
 }
 
 export default function BoxProperties() {
+  const t = useT();
   const selectedElement = useEditorStore((s) => s.selectedElement);
   const { sendStyleUpdate } = useIframeBridge();
 
@@ -147,26 +149,26 @@ export default function BoxProperties() {
   return (
     <div className="space-y-3">
       {/* Background color */}
-      <ColorPicker label="배경색" value={bgColor} onChange={handleBgColorChange} />
+      <ColorPicker label={t('bgColor')} value={bgColor} onChange={handleBgColorChange} />
 
       {/* Background image */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-20 shrink-0">배경 이미지</label>
+        <label className="text-xs text-gray-400 w-20 shrink-0">{t('bgImage')}</label>
         <input
           type="text"
           value={bgImage}
           onChange={(e) => handleBgImageChange(e.target.value)}
-          placeholder="URL 입력"
+          placeholder={t('urlPlaceholder')}
           className="flex-1 bg-gray-800 text-xs text-gray-300 border border-gray-600 rounded px-2 py-1"
         />
       </div>
 
       {/* Border */}
       <div className="space-y-1.5">
-        <span className="text-xs text-gray-400">테두리</span>
+        <span className="text-xs text-gray-400">{t('border')}</span>
         <div className="pl-2 space-y-1.5">
           <Slider
-            label="두께"
+            label={t('thickness')}
             value={border.width}
             onChange={handleBorderWidthChange}
             min={0}
@@ -175,7 +177,7 @@ export default function BoxProperties() {
             unit="px"
           />
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-400 w-20 shrink-0">스타일</label>
+            <label className="text-xs text-gray-400 w-20 shrink-0">{t('style')}</label>
             <select
               value={border.style}
               onChange={(e) => handleBorderStyleChange(e.target.value)}
@@ -188,13 +190,13 @@ export default function BoxProperties() {
               ))}
             </select>
           </div>
-          <ColorPicker label="색상" value={border.color} onChange={handleBorderColorChange} />
+          <ColorPicker label={t('color')} value={border.color} onChange={handleBorderColorChange} />
         </div>
       </div>
 
       {/* Border radius */}
       <Slider
-        label="둥글기"
+        label={t('roundness')}
         value={borderRadius}
         onChange={handleBorderRadiusChange}
         min={0}
@@ -204,20 +206,20 @@ export default function BoxProperties() {
       />
 
       {/* Padding */}
-      <SpacingControl label="안쪽 여백 (padding)" values={padding} onChange={handlePaddingChange} unit="px" />
+      <SpacingControl label={t('padding')} values={padding} onChange={handlePaddingChange} unit="px" />
 
       {/* Margin */}
-      <SpacingControl label="바깥 여백 (margin)" values={margin} onChange={handleMarginChange} unit="px" />
+      <SpacingControl label={t('margin')} values={margin} onChange={handleMarginChange} unit="px" />
 
       {/* Box shadow */}
       <div className="space-y-1.5">
-        <span className="text-xs text-gray-400">그림자</span>
+        <span className="text-xs text-gray-400">{t('shadow')}</span>
         <div className="pl-2 space-y-1.5">
           <Slider label="X" value={boxShadow.x} onChange={(v) => updateBoxShadow({ ...boxShadow, x: v })} min={-50} max={50} step={1} unit="px" />
           <Slider label="Y" value={boxShadow.y} onChange={(v) => updateBoxShadow({ ...boxShadow, y: v })} min={-50} max={50} step={1} unit="px" />
-          <Slider label="흐림" value={boxShadow.blur} onChange={(v) => updateBoxShadow({ ...boxShadow, blur: v })} min={0} max={100} step={1} unit="px" />
-          <Slider label="확산" value={boxShadow.spread} onChange={(v) => updateBoxShadow({ ...boxShadow, spread: v })} min={-50} max={50} step={1} unit="px" />
-          <ColorPicker label="색상" value={boxShadow.color} onChange={(c) => updateBoxShadow({ ...boxShadow, color: c })} />
+          <Slider label={t('blur')} value={boxShadow.blur} onChange={(v) => updateBoxShadow({ ...boxShadow, blur: v })} min={0} max={100} step={1} unit="px" />
+          <Slider label={t('spread')} value={boxShadow.spread} onChange={(v) => updateBoxShadow({ ...boxShadow, spread: v })} min={-50} max={50} step={1} unit="px" />
+          <ColorPicker label={t('color')} value={boxShadow.color} onChange={(c) => updateBoxShadow({ ...boxShadow, color: c })} />
         </div>
       </div>
     </div>

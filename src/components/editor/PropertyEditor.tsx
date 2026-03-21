@@ -1,4 +1,5 @@
 import { useEditorStore } from '../../store/editorStore';
+import { useT } from '../../i18n';
 import TextProperties from './properties/TextProperties';
 import BoxProperties from './properties/BoxProperties';
 import ButtonProperties from './properties/ButtonProperties';
@@ -6,6 +7,7 @@ import ImageProperties from './properties/ImageProperties';
 import LineProperties from './properties/LineProperties';
 
 export default function PropertyEditor() {
+  const t = useT();
   const selectedElement = useEditorStore((s) => s.selectedElement);
   const isClassApply = useEditorStore((s) => s.isClassApply);
   const selectedClass = useEditorStore((s) => s.selectedClass);
@@ -15,39 +17,23 @@ export default function PropertyEditor() {
   if (!selectedElement) return null;
 
   const { elementType, className } = selectedElement;
-  const classes = className
-    ? className
-        .trim()
-        .split(/\s+/)
-        .filter((c) => c)
-    : [];
+  const classes = className ? className.trim().split(/\s+/).filter((c) => c) : [];
 
   const renderProperties = () => {
     switch (elementType) {
-      case 'text':
-        return <TextProperties />;
-      case 'button':
-        return <ButtonProperties />;
-      case 'box':
-        return <BoxProperties />;
-      case 'image':
-        return <ImageProperties />;
-      case 'line':
-        return <LineProperties />;
+      case 'text':      return <TextProperties />;
+      case 'button':    return <ButtonProperties />;
+      case 'box':       return <BoxProperties />;
+      case 'image':     return <ImageProperties />;
+      case 'line':      return <LineProperties />;
       case 'unsupported':
-        return (
-          <p className="text-xs text-gray-500 px-4">
-            편집할 수 없는 요소입니다
-          </p>
-        );
-      default:
-        return null;
+        return <p className="text-xs text-gray-500 px-4">{t('unsupportedElement')}</p>;
+      default:          return null;
     }
   };
 
   return (
     <div className="border-t border-gray-700">
-      {/* Class apply toggle */}
       {classes.length > 0 && (
         <div className="px-4 py-2 border-b border-gray-700 space-y-1.5">
           <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
@@ -57,7 +43,7 @@ export default function PropertyEditor() {
               onChange={toggleClassApply}
               className="accent-blue-500"
             />
-            같은 클래스에 모두 적용
+            {t('applyToAllClass')}
           </label>
           {isClassApply && (
             <select
@@ -65,18 +51,14 @@ export default function PropertyEditor() {
               onChange={(e) => setSelectedClass(e.target.value || null)}
               className="w-full bg-gray-800 text-xs text-gray-300 border border-gray-600 rounded px-2 py-1"
             >
-              <option value="">클래스 선택</option>
+              <option value="">{t('selectClass')}</option>
               {classes.map((cls) => (
-                <option key={cls} value={cls}>
-                  .{cls}
-                </option>
+                <option key={cls} value={cls}>.{cls}</option>
               ))}
             </select>
           )}
         </div>
       )}
-
-      {/* Property editor */}
       <div className="p-4">{renderProperties()}</div>
     </div>
   );

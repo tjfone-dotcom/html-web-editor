@@ -1,5 +1,15 @@
 import { create } from 'zustand';
-import type { EditorState, CaptureSettings, SelectedElement, ViewMode } from '../types/editor';
+import type { EditorState, CaptureSettings, SelectedElement, ViewMode, SupportedLocale } from '../types/editor';
+
+const LOCALE_STORAGE_KEY = 'soez-html-locale';
+
+function getInitialLocale(): SupportedLocale {
+  try {
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY) as SupportedLocale | null;
+    if (saved && ['en', 'ko', 'ja', 'zh'].includes(saved)) return saved;
+  } catch { /* ignore */ }
+  return 'ko';
+}
 
 const MAX_HISTORY = 50;
 
@@ -27,6 +37,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isUndoRedo: false,
   currentSlideIndex: 0,
   undoRedoSlideIndex: null,
+  locale: getInitialLocale(),
 
   // Actions
   setFileName: (name: string | null) => set({ fileName: name }),
@@ -173,4 +184,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       currentSlideIndex: 0,
       undoRedoSlideIndex: null,
     }),
+
+  setLocale: (locale: SupportedLocale) => {
+    try { localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch { /* ignore */ }
+    set({ locale });
+  },
 }));

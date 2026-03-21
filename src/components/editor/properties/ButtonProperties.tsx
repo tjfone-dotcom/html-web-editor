@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useEditorStore } from '../../../store/editorStore';
 import { useIframeBridge } from '../../../hooks/useIframeBridge';
+import { useT } from '../../../i18n';
 import ColorPicker from '../controls/ColorPicker';
 import Slider from '../controls/Slider';
 import SpacingControl from '../controls/SpacingControl';
@@ -31,6 +32,7 @@ function parseBorder(val: string): { width: number; style: string; color: string
 }
 
 export default function ButtonProperties() {
+  const t = useT();
   const selectedElement = useEditorStore((s) => s.selectedElement);
   const { sendStyleUpdate, sendTextUpdate } = useIframeBridge();
 
@@ -114,7 +116,7 @@ export default function ButtonProperties() {
     <div className="space-y-3">
       {/* Text content */}
       <div>
-        <label className="text-xs text-gray-400 block mb-1">텍스트 내용</label>
+        <label className="text-xs text-gray-400 block mb-1">{t('textContent')}</label>
         <textarea
           value={textContent}
           onChange={(e) => handleTextChange(e.target.value)}
@@ -124,14 +126,14 @@ export default function ButtonProperties() {
       </div>
 
       {/* Background color */}
-      <ColorPicker label="배경색" value={bgColor} onChange={handleBgColorChange} />
+      <ColorPicker label={t('bgColor')} value={bgColor} onChange={handleBgColorChange} />
 
       {/* Text color */}
-      <ColorPicker label="글자 색" value={color} onChange={handleColorChange} />
+      <ColorPicker label={t('textColor')} value={color} onChange={handleColorChange} />
 
       {/* Border radius */}
       <Slider
-        label="둥글기"
+        label={t('roundness')}
         value={borderRadius}
         onChange={handleBorderRadiusChange}
         min={0}
@@ -142,10 +144,10 @@ export default function ButtonProperties() {
 
       {/* Border */}
       <div className="space-y-1.5">
-        <span className="text-xs text-gray-400">테두리</span>
+        <span className="text-xs text-gray-400">{t('border')}</span>
         <div className="pl-2 space-y-1.5">
           <Slider
-            label="두께"
+            label={t('thickness')}
             value={border.width}
             onChange={handleBorderWidthChange}
             min={0}
@@ -154,7 +156,7 @@ export default function ButtonProperties() {
             unit="px"
           />
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-400 w-20 shrink-0">스타일</label>
+            <label className="text-xs text-gray-400 w-20 shrink-0">{t('style')}</label>
             <select
               value={border.style}
               onChange={(e) => handleBorderStyleChange(e.target.value)}
@@ -167,16 +169,16 @@ export default function ButtonProperties() {
               ))}
             </select>
           </div>
-          <ColorPicker label="색상" value={border.color} onChange={handleBorderColorChange} />
+          <ColorPicker label={t('color')} value={border.color} onChange={handleBorderColorChange} />
         </div>
       </div>
 
       {/* Padding */}
-      <SpacingControl label="안쪽 여백 (padding)" values={padding} onChange={handlePaddingChange} unit="px" />
+      <SpacingControl label={t('padding')} values={padding} onChange={handlePaddingChange} unit="px" />
 
       {/* Font size */}
       <Slider
-        label="글자 크기"
+        label={t('fontSize')}
         value={fontSize}
         onChange={handleFontSizeChange}
         min={8}

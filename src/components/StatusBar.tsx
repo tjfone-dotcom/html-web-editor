@@ -1,6 +1,8 @@
 import { useEditorStore } from '../store/editorStore';
+import { useT } from '../i18n';
 
 export default function StatusBar() {
+  const t = useT();
   const selectedElement = useEditorStore((state) => state.selectedElement);
 
   return (
@@ -10,7 +12,7 @@ export default function StatusBar() {
           {selectedElement.path.join(' > ')}
         </span>
       ) : (
-        <span>준비</span>
+        <span>{t('ready')}</span>
       )}
     </div>
   );

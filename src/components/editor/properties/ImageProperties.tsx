@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditorStore } from '../../../store/editorStore';
 import { useIframeBridge } from '../../../hooks/useIframeBridge';
+import { useT } from '../../../i18n';
 import Slider from '../controls/Slider';
 
 const OBJECT_FIT_OPTIONS = [
@@ -16,6 +17,7 @@ function parsePx(val: string): number {
 }
 
 export default function ImageProperties() {
+  const t = useT();
   const selectedElement = useEditorStore((s) => s.selectedElement);
   const { sendStyleUpdate, postToIframe } = useIframeBridge();
 
@@ -117,7 +119,7 @@ export default function ImageProperties() {
     <div className="space-y-3">
       {/* Image source */}
       <div>
-        <label className="text-xs text-gray-400 block mb-1">이미지 소스</label>
+        <label className="text-xs text-gray-400 block mb-1">{t('imageSource')}</label>
         <input
           ref={fileInputRef}
           type="file"
@@ -130,14 +132,14 @@ export default function ImageProperties() {
           onClick={() => fileInputRef.current?.click()}
           className="w-full px-3 py-1.5 text-xs bg-gray-800 text-gray-300 border border-gray-600 rounded hover:bg-gray-700"
         >
-          이미지 파일 선택
+          {t('selectImageFile')}
         </button>
       </div>
 
       {/* Width & Height with aspect ratio lock */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs text-gray-400">크기</span>
+          <span className="text-xs text-gray-400">{t('size')}</span>
           <button
             type="button"
             onClick={() => setAspectLocked(!aspectLocked)}
@@ -146,13 +148,13 @@ export default function ImageProperties() {
                 ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                 : 'border-gray-600 text-gray-500'
             }`}
-            title="가로세로 비율 고정"
+            title={t('lockAspectRatio')}
           >
-            {aspectLocked ? '비율 고정' : '비율 해제'}
+            {aspectLocked ? t('aspectLocked') : t('aspectUnlocked')}
           </button>
         </div>
         <Slider
-          label="너비"
+          label={t('width')}
           value={width}
           onChange={handleWidthChange}
           min={0}
@@ -161,7 +163,7 @@ export default function ImageProperties() {
           unit="px"
         />
         <Slider
-          label="높이"
+          label={t('height')}
           value={height}
           onChange={handleHeightChange}
           min={0}
@@ -173,7 +175,7 @@ export default function ImageProperties() {
 
       {/* Border radius */}
       <Slider
-        label="둥글기"
+        label={t('roundness')}
         value={borderRadius}
         onChange={handleBorderRadiusChange}
         min={0}
@@ -184,7 +186,7 @@ export default function ImageProperties() {
 
       {/* Opacity */}
       <Slider
-        label="투명도"
+        label={t('opacity')}
         value={opacity}
         onChange={handleOpacityChange}
         min={0}
@@ -194,7 +196,7 @@ export default function ImageProperties() {
 
       {/* Object fit */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-20 shrink-0">맞춤</label>
+        <label className="text-xs text-gray-400 w-20 shrink-0">{t('objectFit')}</label>
         <select
           value={objectFit}
           onChange={(e) => handleObjectFitChange(e.target.value)}

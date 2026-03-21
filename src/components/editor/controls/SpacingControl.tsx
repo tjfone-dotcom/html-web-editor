@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '../../../i18n';
 
 interface SpacingValues {
   top: number;
@@ -17,15 +18,17 @@ interface SpacingControlProps {
 }
 
 const sides = ['top', 'right', 'bottom', 'left'] as const;
-const sideLabels: Record<string, string> = {
-  top: '상',
-  right: '우',
-  bottom: '하',
-  left: '좌',
-};
 
 export default function SpacingControl({ values, onChange, label, unit = 'px', min = 0, max = 100 }: SpacingControlProps) {
+  const t = useT();
   const [linked, setLinked] = useState(false);
+
+  const sideLabels: Record<string, string> = {
+    top:    t('sideTop'),
+    right:  t('sideRight'),
+    bottom: t('sideBottom'),
+    left:   t('sideLeft'),
+  };
 
   const handleChange = (side: keyof SpacingValues, val: number) => {
     if (linked) {
@@ -47,9 +50,9 @@ export default function SpacingControl({ values, onChange, label, unit = 'px', m
               ? 'border-blue-500 text-blue-400 bg-blue-500/10'
               : 'border-gray-600 text-gray-500'
           }`}
-          title="모든 방향 동일하게 설정"
+          title={t('setAllEqual')}
         >
-          {linked ? '연결됨' : '개별'}
+          {linked ? t('linked') : t('individual')}
         </button>
       </div>
       <div className="grid grid-cols-4 gap-1">
