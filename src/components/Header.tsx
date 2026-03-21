@@ -35,7 +35,10 @@ export default function Header() {
   return (
     <header className="flex items-center justify-between px-4 h-12 bg-gray-900 text-white border-b border-gray-700 shrink-0">
       <div className="flex items-center gap-4">
-        <h1 className="text-sm font-bold tracking-wide">SoEZ HTML</h1>
+        <h1 className="flex items-center gap-2 text-sm font-bold tracking-wide">
+          <img src="/favicon.png" alt="SoEZ HTML" className="w-5 h-5 object-contain" />
+          SoEZ HTML
+        </h1>
         {fileName && (
           <span className="text-xs text-gray-400 truncate max-w-[200px]">
             {fileName}
