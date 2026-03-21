@@ -31,6 +31,40 @@ export function getBridgeScript(): string {
     return false;
   }
 
+  // Selectors for slide framework UI elements that should never be editable
+  var FRAMEWORK_UI_SELECTORS = [
+    // Reveal.js
+    '.aria-status',
+    '.reveal .controls', '.reveal .controls button',
+    '.reveal .progress', '.reveal .slide-number',
+    '.reveal .pause-overlay', '.reveal .backgrounds',
+    '.reveal .playback', '.reveal .jump-to-slide',
+    // Swiper
+    '.swiper-button-next', '.swiper-button-prev',
+    '.swiper-pagination', '.swiper-scrollbar',
+    // Impress.js
+    '#impress-toolbar', '#impress-console',
+    '#impress-progressbar', '#impress-progress',
+    // Slick
+    '.slick-arrow', '.slick-prev', '.slick-next', '.slick-dots',
+    // Deck.js pattern
+    '.deck-status', '.deck-menu',
+    // Generic slide deck controls
+    '.slide-nav', '.slide-controls', '.nav-btn',
+    '.prev-btn', '.next-btn', '.slide-counter',
+  ];
+
+  function isFrameworkUiElement(el) {
+    if (!el || !el.matches) return false;
+    for (var i = 0; i < FRAMEWORK_UI_SELECTORS.length; i++) {
+      try {
+        if (el.matches(FRAMEWORK_UI_SELECTORS[i]) ||
+            (el.closest && el.closest(FRAMEWORK_UI_SELECTORS[i]))) return true;
+      } catch(e) { /* ignore invalid selector */ }
+    }
+    return false;
+  }
+
   function classifyElement(el) {
     var tag = el.tagName.toLowerCase();
     // button first
@@ -698,7 +732,7 @@ export function getBridgeScript(): string {
 
   document.addEventListener('mouseover', function(e) {
     var el = e.target;
-    if (isBridgeOrMeta(el) || el === document.body) return;
+    if (isBridgeOrMeta(el) || isFrameworkUiElement(el) || el === document.body) return;
     el.setAttribute('data-bridge-hover', '');
   }, true);
 
@@ -760,8 +794,13 @@ export function getBridgeScript(): string {
     el.contentEditable = 'true';
     el.focus();
 
-    // Block keyboard events from reaching slide frameworks while editing
+    // Block keyboard events from reaching slide frameworks while editing.
+    // ESC is excepted: blur the element to exit edit mode via onBlur().
     function stopKeyPropagation(e) {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        el.blur();
+        return;
+      }
       e.stopPropagation();
     }
     document.addEventListener('keydown', stopKeyPropagation, true);
@@ -827,7 +866,7 @@ export function getBridgeScript(): string {
       }
     }
 
-    if (isBridgeOrMeta(el) || el === document.body) return;
+    if (isBridgeOrMeta(el) || isFrameworkUiElement(el) || el === document.body) return;
     el.removeAttribute('data-bridge-hover');
     selectElement(el);
 

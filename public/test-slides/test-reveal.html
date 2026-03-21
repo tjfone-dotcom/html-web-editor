@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reveal.js 5 테스트 슬라이드</title>
+
+  <!-- Reveal.js CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/black.css" />
+
+  <!-- Highlight.js CSS (included with Reveal.js) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css" />
+
+  <style>
+    /* ── 클릭 카운터 버튼 (슬라이드 1) ── */
+    .counter-btn {
+      display: inline-block;
+      padding: 0.6em 1.4em;
+      margin-top: 1em;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      background: linear-gradient(135deg, #6c63ff 0%, #3b3dcc 100%);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      box-shadow: 0 4px 14px rgba(108, 99, 255, 0.45);
+    }
+    .counter-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(108, 99, 255, 0.6);
+    }
+    .counter-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(108, 99, 255, 0.4);
+    }
+    .counter-display {
+      margin-top: 0.5em;
+      font-size: 1.1rem;
+      color: #a9a4ff;
+      min-height: 1.6em;
+    }
+
+    /* ── 체크박스 토글 목록 (슬라이드 4) ── */
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 1.2em auto;
+      max-width: 560px;
+      text-align: left;
+    }
+    .checklist li {
+      padding: 0.55em 0.8em;
+      margin-bottom: 0.4em;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.15s ease;
+      user-select: none;
+    }
+    .checklist li:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .checklist li.checked {
+      text-decoration: line-through;
+      color: #aaaaaa;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .check-mark {
+      display: inline-block;
+      width: 1.4em;
+      text-align: center;
+      margin-right: 0.4em;
+      font-style: normal;
+    }
+
+    /* ── 최종 슬라이드 큰 이모지 ── */
+    .big-emoji {
+      font-size: 4rem;
+      display: block;
+      margin: 0.3em 0;
+    }
+
+    /* ── 테이블 스타일링 (슬라이드 3b) ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+      margin-top: 0.8em;
+    }
+    .data-table th,
+    .data-table td {
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 0.55em 0.9em;
+      text-align: center;
+    }
+    .data-table thead th {
+      background: rgba(108, 99, 255, 0.4);
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .data-table tbody tr:nth-child(odd) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .data-table tbody tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  </style>
+</head>
+<body>
+
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ════════════════════════════════════════
+         슬라이드 1: 타이틀 슬라이드
+         ════════════════════════════════════════ -->
+    <section>
+      <h1>Reveal.js 테스트</h1>
+      <p style="font-size:1.2rem; color:#cccccc; margin-bottom:0.2em;">
+        SoEZ HTML 에디터 — 슬라이드 덱 호환성 검증
+      </p>
+      <p style="font-size:0.9rem; color:#888888;">
+        Reveal.js v5 · 한국어 콘텐츠 · CDN 로드
+      </p>
+
+      <div style="margin-top: 1.8em;">
+        <button
+          class="counter-btn"
+          onclick="incrementCounter()"
+          id="counterBtn"
+        >
+          👆 버튼 클릭!
+        </button>
+        <p class="counter-display" id="counterDisplay">아직 클릭하지 않았습니다.</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         슬라이드 2: Fragment 단계별 공개
+         ════════════════════════════════════════ -->
+    <section>
+      <h2>단계별 공개 (Fragment)</h2>
+      <ul style="list-style:disc; padding-left:1.2em; text-align:left; max-width:600px; margin:0 auto;">
+        <li class="fragment fade-in">첫 번째 항목: Reveal.js는 HTML 기반 프레젠테이션 프레임워크입니다.</li>
+        <li class="fragment fade-in">두 번째 항목: 수평 및 수직 슬라이드를 지원합니다.</li>
+        <li class="fragment fade-in">
+          세 번째 항목: 코드 하이라이팅은
+          <span class="fragment highlight-red">highlight.js</span>
+          플러그인으로 처리됩니다.
+        </li>
+        <li class="fragment fade-in">네 번째 항목: 발표자 노트는 'S' 키로 열 수 있습니다.</li>
+        <li class="fragment fade-in">다섯 번째 항목: 모든 기능은 순수 클라이언트 사이드로 동작합니다.</li>
+      </ul>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         슬라이드 3: 수직 슬라이드 (nested section)
+         ════════════════════════════════════════ -->
+    <section>
+
+      <!-- 3a: 코드 블록 -->
+      <section>
+        <h2>세로 슬라이드 A</h2>
+        <p style="font-size:0.9rem; color:#aaaaaa;">↓ 아래 화살표로 다음 세로 슬라이드로 이동</p>
+        <pre><code class="language-javascript" data-trim data-noescape>
+// 인사말 생성 함수
+const greeting = 'Hello, Reveal.js!';
+
+function greet(name) {
+  const message = `${greeting} 안녕하세요, ${name}님!`;
+  console.log(message);
+  return message;
+}
+
+const users = ['철수', '영희', '민준'];
+users.forEach(user =&gt; greet(user));
+
+// 비동기 예시
+async function fetchSlideData(id) {
+  const res = await fetch(`/api/slides/${id}`);
+  return res.json();
+}
+        </code></pre>
+      </section>
+
+      <!-- 3b: 데이터 테이블 -->
+      <section>
+        <h2>세로 슬라이드 B</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>항목</th>
+              <th>버전</th>
+              <th>라이선스</th>
+              <th>특징</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Reveal.js</td>
+              <td>5.x</td>
+              <td>MIT</td>
+              <td>HTML 프레젠테이션 프레임워크</td>
+            </tr>
+            <tr>
+              <td>highlight.js</td>
+              <td>11.x</td>
+              <td>BSD-3</td>
+              <td>코드 구문 하이라이팅</td>
+            </tr>
+            <tr>
+              <td>SoEZ HTML</td>
+              <td>1.0</td>
+              <td>—</td>
+              <td>브라우저 기반 WYSIWYG 에디터</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+    </section>
+
+    <!-- ════════════════════════════════════════
+         슬라이드 4: 배경색 + 체크박스 목록
+         ════════════════════════════════════════ -->
+    <section data-background-color="#1a1a2e">
+      <h2 style="color:#ffffff;">할 일 목록 ✅</h2>
+      <p style="color:#cccccc; font-size:0.9rem;">항목을 클릭하면 완료 처리됩니다.</p>
+      <ul class="checklist" id="checkList">
+        <li onclick="toggleCheck(this)">
+          <i class="check-mark">☐</i>Reveal.js 슬라이드 구조 확인
+        </li>
+        <li onclick="toggleCheck(this)">
+          <i class="check-mark">☐</i>Fragment 애니메이션 동작 테스트
+        </li>
+        <li onclick="toggleCheck(this)">
+          <i class="check-mark">☐</i>수직 슬라이드 네비게이션 검증
+        </li>
+        <li onclick="toggleCheck(this)">
+          <i class="check-mark">☐</i>코드 하이라이팅 플러그인 로드 확인
+        </li>
+        <li onclick="toggleCheck(this)">
+          <i class="check-mark">☐</i>발표자 노트 'S' 키 동작 확인
+        </li>
+      </ul>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         슬라이드 5: 최종 슬라이드 + 발표자 노트
+         ════════════════════════════════════════ -->
+    <section>
+      <h2>테스트 완료 🎉</h2>
+      <span class="big-emoji">🚀</span>
+      <p style="font-size:1rem; color:#cccccc; max-width:560px; margin:0.6em auto;">
+        Reveal.js v5 슬라이드 덱의 모든 주요 기능을<br/>
+        SoEZ HTML 에디터에서 정상적으로 확인하였습니다.
+      </p>
+      <p style="font-size:0.8rem; color:#888888; margin-top:1em;">
+        ← 방향키로 슬라이드를 탐색하고, 'S' 키로 발표자 노트를 열어보세요.
+      </p>
+
+      <aside class="notes">
+        이것은 발표자 노트입니다. 청중에게는 보이지 않고 발표자 화면에만 표시됩니다.
+
+        주요 테스트 항목 요약:
+        - 슬라이드 1: 타이틀 및 JS 클릭 카운터 버튼
+        - 슬라이드 2: Fragment fade-in / highlight-red
+        - 슬라이드 3a: 코드 블록 (highlight.js)
+        - 슬라이드 3b: 데이터 테이블
+        - 슬라이드 4: 배경색, 체크박스 인터랙션
+        - 슬라이드 5: 최종 요약 및 발표자 노트 (현재 화면)
+
+        SoEZ HTML 에디터에서 이 슬라이드 덱을 로드하면
+        슬라이드 덱으로 감지되어 슬라이드 네비게이션이 활성화됩니다.
+      </aside>
+    </section>
+
+  </div><!-- /.slides -->
+</div><!-- /.reveal -->
+
+<!-- ════════════════════════════════════════
+     Reveal.js JS (CDN)
+     ════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/notes/notes.js"></script>
+
+<script>
+  // ── Reveal.js 초기화 ──
+  Reveal.initialize({
+    hash: false,
+    fragments: true,
+    transition: 'slide',
+    backgroundTransition: 'fade',
+    plugins: [RevealHighlight, RevealNotes],
+    highlight: {
+      highlightOnLoad: false
+    }
+  });
+
+  // ── 슬라이드 1: 클릭 카운터 ──
+  var clickCount = 0;
+
+  function incrementCounter() {
+    clickCount++;
+    var display = document.getElementById('counterDisplay');
+    if (clickCount === 1) {
+      display.textContent = '1번 클릭했습니다! 👍';
+    } else {
+      display.textContent = clickCount + '번 클릭했습니다! 🎯';
+    }
+  }
+
+  // ── 슬라이드 4: 체크박스 토글 ──
+  function toggleCheck(item) {
+    var mark = item.querySelector('.check-mark');
+    if (item.classList.contains('checked')) {
+      item.classList.remove('checked');
+      mark.textContent = '☐';
+    } else {
+      item.classList.add('checked');
+      mark.textContent = '✓';
+    }
+  }
+</script>
+
+</body>
+</html>

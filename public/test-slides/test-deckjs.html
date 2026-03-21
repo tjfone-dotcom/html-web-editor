@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deck.js 패턴 테스트</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      background: #0d0f14;
+      color: #e2e8f0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: #1e2233;
+      z-index: 100;
+    }
+    #progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      transition: width 0.4s ease;
+      width: 20%;
+    }
+
+    /* ── Status indicator ── */
+    #status {
+      position: fixed;
+      bottom: 18px; right: 24px;
+      font-size: 13px;
+      color: #64748b;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+      z-index: 100;
+    }
+
+    /* ── Navigation arrows ── */
+    .nav-btn {
+      position: fixed;
+      top: 50%; transform: translateY(-50%);
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: #818cf8;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-btn:hover { background: rgba(99,102,241,0.35); color: #e0e7ff; }
+    #btn-prev { left: 18px; }
+    #btn-next { right: 18px; }
+
+    /* ── Deck container ── */
+    .deck-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Slide base ── */
+    .slide {
+      opacity: 0;
+      position: absolute;
+      inset: 0;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 80px 60px;
+    }
+
+    /* ── Deck.js class states ── */
+    .deck-current  { opacity: 1;  transform: translateX(0);    pointer-events: auto; }
+    .deck-previous { opacity: 0;  transform: translateX(-60px); pointer-events: none; }
+    .deck-before   { opacity: 0;  transform: translateX(-60px); pointer-events: none; }
+    .deck-next     { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
+    .deck-after    { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
+
+    /* ── Common slide elements ── */
+    .slide-title {
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #e2e8f0 30%, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .slide-subtitle {
+      font-size: clamp(14px, 1.8vw, 20px);
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .slide-content {
+      width: 100%;
+      max-width: 760px;
+    }
+
+    /* ── Slide 1 ── */
+    .hero-badge {
+      display: inline-block;
+      background: rgba(99,102,241,0.18);
+      border: 1px solid rgba(99,102,241,0.4);
+      color: #818cf8;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .counter-btn {
+      margin-top: 36px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 12px 32px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .counter-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .counter-btn:active { transform: translateY(0); }
+
+    /* ── Slide 2 — Class diagram ── */
+    .class-diagram {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .class-box {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-align: center;
+      min-width: 120px;
+    }
+    .class-before   { background: #1e1b4b; border: 1px solid #3730a3; color: #a5b4fc; }
+    .class-previous { background: #1e2a3a; border: 1px solid #1d4ed8; color: #93c5fd; }
+    .class-current  { background: #1e3a2f; border: 1px solid #16a34a; color: #86efac; transform: scale(1.08); box-shadow: 0 0 18px rgba(22,163,74,0.3); }
+    .class-next     { background: #3a1e2a; border: 1px solid #9d174d; color: #f9a8d4; }
+    .class-after    { background: #2e1e3a; border: 1px solid #7c3aed; color: #c4b5fd; }
+    .class-arrow {
+      color: #475569;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .code-block {
+      background: #0a0c12;
+      border: 1px solid #1e2233;
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+    .code-block .kw  { color: #818cf8; }
+    .code-block .cls { color: #34d399; }
+    .code-block .str { color: #fbbf24; }
+    .code-block .cmt { color: #475569; }
+
+    /* ── Slide 3 — Checklist ── */
+    .checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .checklist li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #111827;
+      border: 1px solid #1e2233;
+      border-radius: 10px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+      font-size: 15px;
+    }
+    .checklist li:hover { background: #1a2235; border-color: #334155; }
+    .checklist li.checked { border-color: #16a34a; background: #0f2a1e; }
+    .check-icon {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid #334155;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .checklist li.checked .check-icon {
+      background: #16a34a;
+      border-color: #16a34a;
+      color: #fff;
+    }
+
+    /* ── Slide 4 — Keyboard nav ── */
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .key-card {
+      background: #111827;
+      border: 1px solid #1e2233;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .key-badge {
+      display: inline-block;
+      background: #1e2233;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: monospace;
+      font-size: 14px;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+    }
+    .key-desc {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .jump-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .jump-input {
+      background: #111827;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      width: 80px;
+      text-align: center;
+    }
+    .jump-input:focus { outline: none; border-color: #6366f1; }
+    .jump-btn {
+      background: #1e2233;
+      border: 1px solid #334155;
+      color: #818cf8;
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .jump-btn:hover { background: #2d3756; }
+    .note-toggle-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #64748b;
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .note-toggle-btn:hover { color: #e2e8f0; border-color: #6366f1; }
+    .note-panel {
+      background: #0a0c12;
+      border: 1px solid #1e2233;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.7;
+      margin-top: 12px;
+      display: none;
+    }
+    .note-panel.visible { display: block; }
+    .hash-display {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #4b5563;
+      font-family: monospace;
+    }
+
+    /* ── Slide 5 — Summary ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .summary-card {
+      background: #111827;
+      border: 1px solid #1e2233;
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .summary-card-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6366f1;
+      margin-bottom: 8px;
+    }
+    .summary-card-body {
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .final-counter {
+      font-size: clamp(32px, 5vw, 64px);
+      font-weight: 800;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .final-label {
+      font-size: 14px;
+      color: #475569;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="progress-bar"><div id="progress-fill"></div></div>
+
+<!-- Status -->
+<div id="status">1 / 5</div>
+
+<!-- Navigation buttons -->
+<button class="nav-btn" id="btn-prev" onclick="navigate(-1)" title="이전 슬라이드">&#8592;</button>
+<button class="nav-btn" id="btn-next" onclick="navigate(1)" title="다음 슬라이드">&#8594;</button>
+
+<!-- ══════════════════════════════════════
+     DECK CONTAINER
+     ══════════════════════════════════════ -->
+<div class="deck-container">
+
+  <!-- ── Slide 1: Title ── -->
+  <section class="slide deck-current" id="slide-1">
+    <div class="hero-badge">Deck.js 패턴</div>
+    <h1 class="slide-title">Deck.js 패턴 테스트</h1>
+    <p class="slide-subtitle">순수 구현 — 동일한 클래스 구조</p>
+    <button class="counter-btn" id="click-counter-btn" onclick="incrementCounter()">
+      클릭 횟수: <span id="click-count">0</span>
+    </button>
+  </section>
+
+  <!-- ── Slide 2: Class structure ── -->
+  <section class="slide deck-after" id="slide-2">
+    <h2 class="slide-title">클래스 구조 설명</h2>
+    <p class="slide-subtitle">슬라이드 위치에 따라 부여되는 CSS 클래스</p>
+    <div class="slide-content">
+      <div class="class-diagram">
+        <div class="class-box class-before">
+          <div style="font-size:10px;color:#6366f1;margin-bottom:4px">이전 전체</div>
+          .deck-before
+        </div>
+        <span class="class-arrow">›</span>
+        <div class="class-box class-previous">
+          <div style="font-size:10px;color:#3b82f6;margin-bottom:4px">바로 이전</div>
+          .deck-previous
+        </div>
+        <span class="class-arrow">›</span>
+        <div class="class-box class-current">
+          <div style="font-size:10px;color:#22c55e;margin-bottom:4px">현재 활성</div>
+          .deck-current
+        </div>
+        <span class="class-arrow">›</span>
+        <div class="class-box class-next">
+          <div style="font-size:10px;color:#ec4899;margin-bottom:4px">바로 다음</div>
+          .deck-next
+        </div>
+        <span class="class-arrow">›</span>
+        <div class="class-box class-after">
+          <div style="font-size:10px;color:#8b5cf6;margin-bottom:4px">다음 전체</div>
+          .deck-after
+        </div>
+      </div>
+      <div class="code-block">
+<span class="cmt">// goTo(n) 호출 시 각 슬라이드에 적용되는 클래스</span>
+slides.<span class="kw">forEach</span>((s, i) =&gt; {
+  s.classList.<span class="kw">remove</span>(<span class="str">'deck-current'</span>, <span class="str">'deck-previous'</span>,
+                 <span class="str">'deck-next'</span>, <span class="str">'deck-before'</span>, <span class="str">'deck-after'</span>);
+  <span class="kw">if</span>      (i === n)     s.classList.<span class="kw">add</span>(<span class="str">'deck-current'</span>);
+  <span class="kw">else if</span> (i === n - 1) s.classList.<span class="kw">add</span>(<span class="str">'deck-previous'</span>);
+  <span class="kw">else if</span> (i === n + 1) s.classList.<span class="kw">add</span>(<span class="str">'deck-next'</span>);
+  <span class="kw">else if</span> (i &lt; n)      s.classList.<span class="kw">add</span>(<span class="str">'deck-before'</span>);
+  <span class="kw">else</span>               s.classList.<span class="kw">add</span>(<span class="str">'deck-after'</span>);
+});
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Slide 3: Checklist ── -->
+  <section class="slide deck-after" id="slide-3">
+    <h2 class="slide-title">체크리스트</h2>
+    <p class="slide-subtitle">항목을 클릭하여 완료 표시하세요</p>
+    <div class="slide-content">
+      <ul class="checklist" id="checklist">
+        <li onclick="toggleCheck(this)">
+          <span class="check-icon">✓</span>
+          .deck-container 래퍼 구조 확인
+        </li>
+        <li onclick="toggleCheck(this)">
+          <span class="check-icon">✓</span>
+          &lt;section class="slide"&gt; 슬라이드 마크업 확인
+        </li>
+        <li onclick="toggleCheck(this)">
+          <span class="check-icon">✓</span>
+          deck-current / deck-previous / deck-next 클래스 동작 확인
+        </li>
+        <li onclick="toggleCheck(this)">
+          <span class="check-icon">✓</span>
+          deck-before / deck-after 클래스 동작 확인
+        </li>
+        <li onclick="toggleCheck(this)">
+          <span class="check-icon">✓</span>
+          URL 해시 및 키보드 네비게이션 확인
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Slide 4: Keyboard & Hash navigation ── -->
+  <section class="slide deck-after" id="slide-4">
+    <h2 class="slide-title">키보드 &amp; 해시 네비게이션</h2>
+    <p class="slide-subtitle">다양한 방법으로 슬라이드를 탐색할 수 있습니다</p>
+    <div class="slide-content">
+      <div class="key-grid">
+        <div class="key-card">
+          <div class="key-badge">← / Backspace</div>
+          <div class="key-desc">이전 슬라이드</div>
+        </div>
+        <div class="key-card">
+          <div class="key-badge">→ / Space</div>
+          <div class="key-desc">다음 슬라이드</div>
+        </div>
+        <div class="key-card">
+          <div class="key-badge">#slide-N</div>
+          <div class="key-desc">URL 해시로 직접 이동</div>
+        </div>
+      </div>
+      <div class="jump-row">
+        <input class="jump-input" id="jump-input" type="number" min="1" max="5" placeholder="1–5" />
+        <button class="jump-btn" onclick="jumpToSlide()">슬라이드로 이동</button>
+        <button class="note-toggle-btn" onclick="toggleNote()">📝 노트 보기</button>
+      </div>
+      <div id="note-panel" class="note-panel">
+        <strong style="color:#94a3b8">구현 노트:</strong> 페이지 로드 시 <code style="color:#818cf8">location.hash</code>를 읽어 슬라이드 위치를 복원합니다.
+        슬라이드 이동마다 해시가 <code style="color:#818cf8">#slide-N</code> 형식으로 업데이트됩니다.
+        브라우저의 뒤로 가기/앞으로 가기(popstate)도 지원됩니다.
+      </div>
+      <div class="hash-display" id="hash-display">현재 해시: #slide-1</div>
+    </div>
+  </section>
+
+  <!-- ── Slide 5: Completion ── -->
+  <section class="slide deck-after" id="slide-5">
+    <h2 class="slide-title">테스트 완료</h2>
+    <p class="slide-subtitle">Deck.js 클래스 패턴이 순수 JS/CSS로 정상 구현되었습니다</p>
+    <div class="slide-content">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-card-title">클래스 구조</div>
+          <div class="summary-card-body">
+            deck-before, deck-previous,<br>
+            deck-current, deck-next, deck-after<br>
+            5가지 상태 클래스 완전 구현
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-title">네비게이션</div>
+          <div class="summary-card-body">
+            키보드 (←→ Space Backspace)<br>
+            URL 해시 복원<br>
+            번호 직접 이동
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-title">인터랙션</div>
+          <div class="summary-card-body">
+            클릭 카운터<br>
+            체크리스트 토글<br>
+            노트 패널 표시/숨김
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-title">전환 효과</div>
+          <div class="summary-card-body">
+            opacity + translateX<br>
+            0.4s ease 트랜지션<br>
+            진행 막대 애니메이션
+          </div>
+        </div>
+      </div>
+      <div class="final-counter" id="final-counter">1 / 5</div>
+      <div class="final-label">현재 슬라이드 / 전체 슬라이드</div>
+    </div>
+  </section>
+
+</div><!-- /.deck-container -->
+
+<script>
+  // ── State ──
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  let clickCount = 0;
+
+  // ── Core navigation ──
+  function goTo(n) {
+    if (n < 0 || n >= slides.length) return;
+
+    slides.forEach((s, i) => {
+      s.classList.remove('deck-current', 'deck-previous', 'deck-next', 'deck-before', 'deck-after');
+      if      (i === n)     s.classList.add('deck-current');
+      else if (i === n - 1) s.classList.add('deck-previous');
+      else if (i === n + 1) s.classList.add('deck-next');
+      else if (i < n)       s.classList.add('deck-before');
+      else                  s.classList.add('deck-after');
+    });
+
+    current = n;
+
+    // Update progress bar
+    document.getElementById('progress-fill').style.width =
+      ((n + 1) / slides.length * 100) + '%';
+
+    // Update status
+    const label = (n + 1) + ' / ' + slides.length;
+    document.getElementById('status').textContent = label;
+
+    // Update final slide counter
+    document.getElementById('final-counter').textContent = label;
+
+    // Update URL hash (without triggering popstate loop)
+    const hash = '#slide-' + (n + 1);
+    if (location.hash !== hash) {
+      history.pushState({ slide: n }, '', hash);
+    }
+
+    // Update hash display in slide 4
+    document.getElementById('hash-display').textContent = '현재 해시: ' + hash;
+
+    // Sync nav button visibility
+    document.getElementById('btn-prev').style.opacity = n === 0 ? '0.3' : '1';
+    document.getElementById('btn-next').style.opacity = n === slides.length - 1 ? '0.3' : '1';
+  }
+
+  function navigate(dir) {
+    goTo(current + dir);
+  }
+
+  // ── Slide 1: Click counter ──
+  function incrementCounter() {
+    clickCount++;
+    document.getElementById('click-count').textContent = clickCount;
+  }
+
+  // ── Slide 3: Checklist toggle ──
+  function toggleCheck(el) {
+    el.classList.toggle('checked');
+  }
+
+  // ── Slide 4: Jump to specific slide ──
+  function jumpToSlide() {
+    const val = parseInt(document.getElementById('jump-input').value, 10);
+    if (!isNaN(val) && val >= 1 && val <= slides.length) {
+      goTo(val - 1);
+    }
+  }
+
+  // ── Slide 4: Note panel toggle ──
+  function toggleNote() {
+    const panel = document.getElementById('note-panel');
+    panel.classList.toggle('visible');
+  }
+
+  // ── Keyboard navigation ──
+  document.addEventListener('keydown', function(e) {
+    switch (e.key) {
+      case 'ArrowRight':
+      case ' ':
+        e.preventDefault();
+        navigate(1);
+        break;
+      case 'ArrowLeft':
+      case 'Backspace':
+        e.preventDefault();
+        navigate(-1);
+        break;
+    }
+  });
+
+  // ── Hash navigation (back/forward buttons) ──
+  window.addEventListener('popstate', function(e) {
+    if (e.state && typeof e.state.slide === 'number') {
+      goTo(e.state.slide);
+    } else {
+      const idx = parseHashSlide();
+      if (idx !== null) goTo(idx);
+    }
+  });
+
+  // ── Parse hash on load ──
+  function parseHashSlide() {
+    const match = location.hash.match(/^#slide-(\d+)$/);
+    if (match) {
+      const n = parseInt(match[1], 10) - 1;
+      if (n >= 0 && n < slides.length) return n;
+    }
+    return null;
+  }
+
+  // ── Initialise ──
+  (function init() {
+    // Apply initial classes to all slides
+    slides.forEach((s, i) => {
+      s.classList.remove('deck-current', 'deck-previous', 'deck-next', 'deck-before', 'deck-after');
+      if (i === 0) s.classList.add('deck-current');
+      else         s.classList.add('deck-after');
+    });
+
+    // Restore from hash if present
+    const fromHash = parseHashSlide();
+    if (fromHash !== null && fromHash !== 0) {
+      goTo(fromHash);
+    } else {
+      // Push initial state
+      history.replaceState({ slide: 0 }, '', '#slide-1');
+      document.getElementById('btn-prev').style.opacity = '0.3';
+    }
+  })();
+</script>
+</body>
+</html>

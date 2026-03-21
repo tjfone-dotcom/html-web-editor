@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slick Carousel 테스트</title>
+
+  <!-- jQuery 3.7 -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+
+  <!-- Slick Carousel 1.8.1 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css" />
+
+  <!-- Slick Carousel 1.8.1 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+  <style>
+    /* ───── Reset & Base ───── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      overflow: hidden;
+    }
+
+    /* ───── Wrapper ───── */
+    .slider-wrapper {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* ───── Slick overrides ───── */
+    .slick-slider,
+    .slick-list,
+    .slick-track,
+    .slick-slide,
+    .slick-slide > div {
+      height: 100%;
+    }
+
+    .slick-slide > div {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ───── Dots ───── */
+    .slick-dots {
+      bottom: 28px;
+      z-index: 100;
+    }
+
+    .slick-dots li button:before {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      opacity: 1;
+    }
+
+    .slick-dots li.slick-active button:before {
+      color: #ffffff;
+      opacity: 1;
+    }
+
+    /* ───── Arrows ───── */
+    .slick-prev,
+    .slick-next {
+      z-index: 100;
+      width: 48px;
+      height: 48px;
+    }
+
+    .slick-prev { left: 20px; }
+    .slick-next { right: 20px; }
+
+    .slick-prev:before,
+    .slick-next:before {
+      font-size: 36px;
+      color: rgba(255,255,255,0.8);
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    .slick-prev:hover:before,
+    .slick-next:hover:before {
+      color: #ffffff;
+    }
+
+    /* ───── Slides common ───── */
+    .slide {
+      width: 100%;
+      height: 100vh;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 40px 80px;
+    }
+
+    .slide-card {
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 24px;
+      padding: 52px 60px;
+      max-width: 720px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+    }
+
+    .slide-title {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .slide-subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* ───── Slide 1 — Blue ───── */
+    .slide-1 { background: linear-gradient(135deg, #1a237e 0%, #1565c0 50%, #0288d1 100%); }
+
+    .counter-display {
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    .btn-counter {
+      background: linear-gradient(135deg, #42a5f5, #1e88e5);
+      color: #ffffff;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 36px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 6px 20px rgba(33,150,243,0.5);
+      letter-spacing: 0.3px;
+    }
+
+    .btn-counter:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(33,150,243,0.6);
+    }
+
+    .btn-counter:active {
+      transform: translateY(0);
+    }
+
+    /* ───── Slide 2 — Purple ───── */
+    .slide-2 { background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 50%, #ab47bc 100%); }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .feature-item {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 14px;
+      padding: 20px 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .feature-item:hover {
+      background: rgba(255,255,255,0.25);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 1.5rem;
+    }
+
+    /* ───── Slide 3 — Green ───── */
+    .slide-3 { background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%); }
+
+    .checklist {
+      list-style: none;
+      text-align: left;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .checklist li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s ease;
+    }
+
+    .checklist li:last-child {
+      border-bottom: none;
+    }
+
+    .checklist li:hover {
+      color: #ffffff;
+    }
+
+    .check-box {
+      width: 26px;
+      height: 26px;
+      border: 2px solid rgba(255,255,255,0.6);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .checklist li.checked .check-box {
+      background: #69f0ae;
+      border-color: #69f0ae;
+      color: #1b5e20;
+    }
+
+    .checklist li.checked > span:last-child {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    /* ───── Slide 4 — Orange ───── */
+    .slide-4 { background: linear-gradient(135deg, #bf360c 0%, #e64a19 50%, #ff7043 100%); }
+
+    .code-block {
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      text-align: left;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.82rem;
+      color: #ffd54f;
+      line-height: 1.7;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .breakpoint-diagram {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .bp-bar {
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 8px;
+      color: rgba(255,255,255,0.9);
+      font-size: 0.7rem;
+      font-weight: 700;
+      transition: opacity 0.2s;
+    }
+
+    .bp-bar:hover { opacity: 0.8; }
+
+    .bp-label {
+      margin-top: 8px;
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ───── Slide 5 — Dark ───── */
+    .slide-5 { background: linear-gradient(135deg, #212121 0%, #37474f 50%, #546e7a 100%); }
+
+    .big-check {
+      font-size: clamp(4rem, 10vw, 6rem);
+      margin-bottom: 16px;
+      animation: bounceIn 0.8s ease;
+    }
+
+    @keyframes bounceIn {
+      0%   { transform: scale(0.3); opacity: 0; }
+      50%  { transform: scale(1.1); }
+      70%  { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .summary-list {
+      list-style: none;
+      text-align: left;
+      margin: 16px 0 24px;
+    }
+
+    .summary-list li {
+      color: rgba(255,255,255,0.85);
+      font-size: 1rem;
+      padding: 6px 0;
+      display: flex;
+      gap: 8px;
+    }
+
+    .summary-list li::before {
+      content: '✔';
+      color: #69f0ae;
+      flex-shrink: 0;
+    }
+
+    .slide-indicator {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 50px;
+      padding: 10px 26px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* ───── Control Bar ───── */
+    .control-bar {
+      position: fixed;
+      bottom: 70px;
+      right: 24px;
+      z-index: 200;
+    }
+
+    .btn-pause {
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 50px;
+      padding: 10px 22px;
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: background 0.2s ease, transform 0.15s ease;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-pause:hover {
+      background: rgba(0,0,0,0.75);
+      transform: translateY(-1px);
+    }
+
+    /* ───── Responsive ───── */
+    @media (max-width: 768px) {
+      .slide { padding: 24px 20px; }
+      .slide-card { padding: 36px 28px; }
+      .code-block { font-size: 0.72rem; }
+      .feature-grid { gap: 10px; }
+      .feature-item { padding: 14px 12px; font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════
+       SLIDER WRAPPER
+  ═══════════════════════════════ -->
+  <div class="slider-wrapper">
+    <div class="slider">
+
+      <!-- ── Slide 1: Blue ── -->
+      <div>
+        <div class="slide slide-1">
+          <div class="slide-card">
+            <div class="slide-title">Slick Carousel 테스트</div>
+            <div class="slide-subtitle">jQuery 기반 강력한 슬라이드 라이브러리<br>SoEZ HTML 에디터 호환성 검증</div>
+            <div class="counter-display" id="counterDisplay">클릭 수: <span id="counterValue">0</span></div>
+            <button class="btn-counter" id="counterBtn" type="button">🖱 클릭해 보세요!</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Slide 2: Purple ── -->
+      <div>
+        <div class="slide slide-2">
+          <div class="slide-card">
+            <div class="slide-title">핵심 기능</div>
+            <div class="slide-subtitle">Slick Carousel이 제공하는 주요 기능들</div>
+            <div class="feature-grid">
+              <div class="feature-item"><span class="feature-icon">🎯</span><span>Fade 전환</span></div>
+              <div class="feature-item"><span class="feature-icon">⚡</span><span>Autoplay</span></div>
+              <div class="feature-item"><span class="feature-icon">📱</span><span>반응형</span></div>
+              <div class="feature-item"><span class="feature-icon">⌨️</span><span>키보드 탐색</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Slide 3: Green ── -->
+      <div>
+        <div class="slide slide-3">
+          <div class="slide-card">
+            <div class="slide-title">체크리스트</div>
+            <div class="slide-subtitle">항목을 클릭해서 완료 처리하세요</div>
+            <ul class="checklist" id="checklist">
+              <li data-checked="false"><span class="check-box"></span><span>Slick CSS/JS CDN 로드 확인</span></li>
+              <li data-checked="false"><span class="check-box"></span><span>Fade 전환 효과 동작 확인</span></li>
+              <li data-checked="false"><span class="check-box"></span><span>Autoplay 및 일시정지 확인</span></li>
+              <li data-checked="false"><span class="check-box"></span><span>반응형 화살표 숨김 확인</span></li>
+              <li data-checked="false"><span class="check-box"></span><span>슬라이드 번호 표시 확인</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Slide 4: Orange ── -->
+      <div>
+        <div class="slide slide-4">
+          <div class="slide-card">
+            <div class="slide-title">반응형 설정</div>
+            <div class="slide-subtitle">breakpoint 별 동작 설정값</div>
+            <div class="code-block">responsive: [
+  {
+    breakpoint: 768,
+    settings: {
+      arrows: false,
+      dots: true
+    }
+  },
+  {
+    breakpoint: 480,
+    settings: {
+      arrows: false,
+      autoplay: false
+    }
+  }
+]</div>
+            <div class="breakpoint-diagram">
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div class="bp-bar" style="background:rgba(255,255,255,0.25);width:90px;height:64px;">
+                  <span>↔ arrows</span>
+                </div>
+                <div class="bp-label">≥ 769px</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div class="bp-bar" style="background:rgba(255,255,255,0.18);width:66px;height:48px;">
+                  <span>no arrows</span>
+                </div>
+                <div class="bp-label">≤ 768px</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div class="bp-bar" style="background:rgba(255,255,255,0.12);width:46px;height:36px;">
+                  <span style="font-size:0.6rem;">no auto</span>
+                </div>
+                <div class="bp-label">≤ 480px</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Slide 5: Dark ── -->
+      <div>
+        <div class="slide slide-5">
+          <div class="slide-card">
+            <div class="big-check">✅</div>
+            <div class="slide-title">테스트 완료</div>
+            <ul class="summary-list">
+              <li>Slick Carousel 1.8.1 정상 로드</li>
+              <li>Fade 전환 + Autoplay 동작 확인</li>
+              <li>순수 JS 인터랙션 (카운터, 체크리스트)</li>
+              <li>afterChange 이벤트 연동 확인</li>
+            </ul>
+            <div class="slide-indicator" id="slideIndicator">현재: 1번째 슬라이드</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.slider -->
+  </div><!-- /.slider-wrapper -->
+
+  <!-- ═══════════════════════════════
+       CONTROL BAR (pause / play)
+  ═══════════════════════════════ -->
+  <div class="control-bar">
+    <button class="btn-pause" id="pausePlayBtn" type="button">⏸ 일시정지</button>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SCRIPTS
+  ═══════════════════════════════ -->
+  <script>
+    $(function () {
+
+      /* ── 1. Slick 초기화 ── */
+      $('.slider').slick({
+        dots: true,
+        arrows: true,
+        infinite: true,
+        fade: true,
+        autoplay: true,
+        autoplaySpeed: 4000,
+        pauseOnHover: true,
+        keyboard: true,
+        speed: 600,
+        cssEase: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        responsive: [
+          {
+            breakpoint: 768,
+            settings: {
+              arrows: false
+            }
+          }
+        ]
+      });
+
+      /* ── 2. afterChange: 슬라이드 번호 업데이트 ── */
+      $('.slider').on('afterChange', function (e, slick, currentSlide) {
+        var display = document.getElementById('slideIndicator');
+        if (display) {
+          display.textContent = '현재: ' + (currentSlide + 1) + '번째 슬라이드';
+        }
+      });
+
+      /* ── 3. 일시정지 / 재생 버튼 (jQuery로 Slick API 호출) ── */
+      var isPlaying = true;
+      document.getElementById('pausePlayBtn').addEventListener('click', function () {
+        if (isPlaying) {
+          $('.slider').slick('slickPause');
+          this.textContent = '▶ 재생';
+          isPlaying = false;
+        } else {
+          $('.slider').slick('slickPlay');
+          this.textContent = '⏸ 일시정지';
+          isPlaying = true;
+        }
+      });
+
+    }); // end $(function)
+
+
+    /* ══════════════════════════════
+       Pure JS interactions (no jQuery)
+    ══════════════════════════════ */
+
+    /* ── 4. 클릭 카운터 (Slide 1) — pure JS ── */
+    (function () {
+      var count = 0;
+      var btn   = document.getElementById('counterBtn');
+      var val   = document.getElementById('counterValue');
+      if (btn && val) {
+        btn.addEventListener('click', function () {
+          count += 1;
+          val.textContent = count;
+          btn.textContent = count < 5  ? '🖱 클릭해 보세요!'
+                          : count < 10 ? '🔥 계속 클릭!'
+                          : count < 20 ? '💥 멈출 수 없어!'
+                          :              '🏆 ' + count + '회 달성!';
+        });
+      }
+    })();
+
+    /* ── 5. 체크리스트 토글 (Slide 3) — pure JS ── */
+    (function () {
+      var items = document.querySelectorAll('#checklist li');
+      items.forEach(function (li) {
+        li.addEventListener('click', function () {
+          var isChecked = li.getAttribute('data-checked') === 'true';
+          var newState  = !isChecked;
+          li.setAttribute('data-checked', newState ? 'true' : 'false');
+          var box = li.querySelector('.check-box');
+          if (newState) {
+            li.classList.add('checked');
+            if (box) box.textContent = '✓';
+          } else {
+            li.classList.remove('checked');
+            if (box) box.textContent = '';
+          }
+        });
+      });
+    })();
+
+  </script>
+</body>
+</html>
