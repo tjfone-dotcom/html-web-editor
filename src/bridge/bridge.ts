@@ -110,6 +110,55 @@ export function getBridgeScript(): string {
       textContent = el.textContent || '';
     }
 
+    // Build opening tag for source matching (strip bridge attributes)
+    var tempDiv = document.createElement('div');
+    tempDiv.appendChild(el.cloneNode(false));
+    var openingTag = tempDiv.innerHTML
+      .replace(/ data-bridge[^"]*="[^"]*"/g, '')
+      .replace(/ data-editor-id="[^"]*"/g, '')
+      .replace(/ contenteditable="[^"]*"/g, '');
+    var gtIdx = openingTag.indexOf('>');
+    if (gtIdx !== -1) openingTag = openingTag.substring(0, gtIdx + 1);
+
+    // Build htmlContext: 50 chars before + 50 chars after the element's opening tag in clean HTML
+    var htmlContext = null;
+    try {
+      var cleanHtml = serializeDOM();
+      // Find the opening tag position in clean HTML
+      var pos = cleanHtml.indexOf(openingTag);
+      if (pos !== -1) {
+        // If there are multiple occurrences, find the right one
+        // by matching surrounding content too
+        var elCleanOuter = el.cloneNode(true);
+        // Remove bridge attributes from clone for matching
+        var bridgeEls = elCleanOuter.querySelectorAll ? elCleanOuter.querySelectorAll('[data-editor-id],[data-bridge-hover],[data-bridge-selected],[contenteditable]') : [];
+        for (var bi = 0; bi < bridgeEls.length; bi++) {
+          bridgeEls[bi].removeAttribute('data-editor-id');
+          bridgeEls[bi].removeAttribute('data-bridge-hover');
+          bridgeEls[bi].removeAttribute('data-bridge-selected');
+          bridgeEls[bi].removeAttribute('contenteditable');
+        }
+        if (elCleanOuter.removeAttribute) {
+          elCleanOuter.removeAttribute('data-editor-id');
+          elCleanOuter.removeAttribute('data-bridge-hover');
+          elCleanOuter.removeAttribute('data-bridge-selected');
+          elCleanOuter.removeAttribute('contenteditable');
+        }
+        var tmpDiv2 = document.createElement('div');
+        tmpDiv2.appendChild(elCleanOuter);
+        var cleanOuterHtml = tmpDiv2.innerHTML;
+        // Find exact position using full outerHTML (handles duplicates)
+        var exactPos = cleanHtml.indexOf(cleanOuterHtml);
+        if (exactPos !== -1) pos = exactPos;
+
+        var before = cleanHtml.substring(Math.max(0, pos - 50), pos);
+        var after = cleanHtml.substring(pos, Math.min(cleanHtml.length, pos + 50));
+        htmlContext = { before: before, after: after };
+      }
+    } catch(e) {
+      console.log('[bridge] htmlContext error:', e);
+    }
+
     window.parent.postMessage({
       type: 'ELEMENT_SELECTED',
       payload: {
@@ -120,7 +169,9 @@ export function getBridgeScript(): string {
         elementType: elType,
         computedStyles: getComputedStylesSubset(el),
         textContent: textContent,
-        path: getElementPath(el)
+        path: getElementPath(el),
+        openingTag: openingTag,
+        htmlContext: htmlContext
       }
     }, '*');
   }
@@ -154,7 +205,201 @@ export function getBridgeScript(): string {
     }, '*');
   }
 
-  // --- Slide State Save/Restore (for REPLACE_DOM viewport preservation) ---
+  // --- Slide Framework API Save/Restore (for REPLACE_DOM) ---
+  // Detects known slide frameworks and saves/restores via their JS API,
+  // so internal counters stay in sync — not just CSS classes.
+
+  function captureFrameworkSlideIndex() {
+    // Reveal.js
+    if (window.Reveal && typeof window.Reveal.getIndices === 'function') {
+      var idx = window.Reveal.getIndices();
+      var result = { framework: 'reveal', h: idx.h, v: idx.v, f: idx.f !== undefined ? idx.f : -1 };
+      console.log('[bridge] captureFrameworkSlideIndex:', JSON.stringify(result));
+      return result;
+    }
+
+    // Swiper — find first initialized instance
+    var swiperEl = document.querySelector('.swiper');
+    if (swiperEl && swiperEl.swiper) {
+      var result = { framework: 'swiper', index: swiperEl.swiper.activeIndex };
+      console.log('[bridge] captureFrameworkSlideIndex:', JSON.stringify(result));
+      return result;
+    }
+
+    // Impress.js
+    if (window.impress && typeof window.impress === 'function') {
+      var activeStep = document.querySelector('.step.active, .impress-on .active');
+      if (activeStep) {
+        var stepId = activeStep.id || '';
+        var steps = document.querySelectorAll('.step');
+        var stepIndex = 0;
+        for (var i = 0; i < steps.length; i++) {
+          if (steps[i] === activeStep) { stepIndex = i; break; }
+        }
+        var result = { framework: 'impress', id: stepId, index: stepIndex };
+        console.log('[bridge] captureFrameworkSlideIndex:', JSON.stringify(result));
+        return result;
+      }
+    }
+
+    // Slick (jQuery)
+    if (window.jQuery || window.$) {
+      var jq = window.jQuery || window.$;
+      var slickEl = jq && jq('.slick-initialized');
+      if (slickEl && slickEl.length > 0 && slickEl.slick) {
+        try {
+          var result = { framework: 'slick', index: slickEl.slick('slickCurrentSlide') };
+          console.log('[bridge] captureFrameworkSlideIndex:', JSON.stringify(result));
+          return result;
+        } catch(e) {}
+      }
+    }
+
+    // Generic fallback: find active slide index by CSS class
+    var sel = getSlideSelector();
+    if (sel) {
+      var slides = document.querySelectorAll(sel);
+      var activeClasses = ['active', 'current', 'present', 'swiper-slide-active'];
+      for (var i = 0; i < slides.length; i++) {
+        for (var j = 0; j < activeClasses.length; j++) {
+          if (slides[i].classList.contains(activeClasses[j])) {
+            var result = { framework: 'generic', index: i, selector: sel };
+            console.log('[bridge] captureFrameworkSlideIndex:', JSON.stringify(result));
+            return result;
+          }
+        }
+      }
+    }
+
+    // No framework detected — log available globals for debugging
+    console.log('[bridge] captureFrameworkSlideIndex: no framework detected.',
+      'Reveal:', typeof window.Reveal,
+      'impress:', typeof window.impress,
+      'jQuery:', typeof window.jQuery,
+      'slideSelector:', getSlideSelector());
+    return null;
+  }
+
+  function restoreFrameworkSlideIndex(saved) {
+    if (!saved) return;
+    console.log('[bridge] restoreFrameworkSlideIndex:', JSON.stringify(saved));
+
+    // Reveal.js
+    if (saved.framework === 'reveal' && window.Reveal && typeof window.Reveal.slide === 'function') {
+      window.Reveal.slide(saved.h, saved.v, saved.f);
+      console.log('[bridge] Reveal.slide() called');
+      return;
+    }
+
+    // Swiper
+    if (saved.framework === 'swiper') {
+      var swiperEl = document.querySelector('.swiper');
+      if (swiperEl && swiperEl.swiper) {
+        swiperEl.swiper.slideTo(saved.index, 0);
+        console.log('[bridge] swiper.slideTo() called');
+        return;
+      }
+    }
+
+    // Impress.js
+    if (saved.framework === 'impress' && window.impress && typeof window.impress === 'function') {
+      var api = window.impress();
+      if (api && typeof api.goto === 'function') {
+        if (saved.id) {
+          var el = document.getElementById(saved.id);
+          if (el) { api.goto(el); console.log('[bridge] impress.goto() called'); return; }
+        }
+        var steps = document.querySelectorAll('.step');
+        if (saved.index < steps.length) { api.goto(saved.index); console.log('[bridge] impress.goto() called'); return; }
+      }
+    }
+
+    // Slick
+    if (saved.framework === 'slick') {
+      var jq = window.jQuery || window.$;
+      if (jq) {
+        var slickEl = jq('.slick-initialized');
+        if (slickEl && slickEl.length > 0 && slickEl.slick) {
+          try { slickEl.slick('slickGoTo', saved.index, true); console.log('[bridge] slick.slickGoTo() called'); return; } catch(e) {}
+        }
+      }
+    }
+
+    // Generic: try to find a custom slide controller on window
+    if (saved.framework === 'generic' && saved.index !== undefined) {
+      // Strategy 1 (PRIORITY): Set global index variable + call updateNav
+      // goTo() often has "if (idx === current) return;" guard, so setting the
+      // variable directly + calling updateNav is more reliable.
+      var globalIndexVars = ['current', 'currentSlide', 'currentIndex', 'slideIndex', 'activeIndex'];
+      for (var vi = 0; vi < globalIndexVars.length; vi++) {
+        if (typeof window[globalIndexVars[vi]] === 'number') {
+          console.log('[bridge] generic: setting global', globalIndexVars[vi], '=', saved.index);
+          window[globalIndexVars[vi]] = saved.index;
+          // Call update function if exists
+          var updateFns = ['updateNav', 'updateUI', 'updateCounter', 'updateSlideNav', 'refreshNav'];
+          for (var ui = 0; ui < updateFns.length; ui++) {
+            if (typeof window[updateFns[ui]] === 'function') {
+              console.log('[bridge] generic: calling global', updateFns[ui] + '()');
+              window[updateFns[ui]]();
+              break;
+            }
+          }
+          return;
+        }
+      }
+
+      // Strategy 2: Call global goTo with two-step trick to bypass "if (idx === current) return" guard
+      var globalNavFns = ['goToSlide', 'goTo', 'slideTo', 'showSlide', 'navigateToSlide', 'jumpToSlide'];
+      for (var fi = 0; fi < globalNavFns.length; fi++) {
+        if (typeof window[globalNavFns[fi]] === 'function') {
+          // First go to a different index to reset internal state
+          var dummyIdx = saved.index === 0 ? 1 : 0;
+          console.log('[bridge] generic: two-step goTo trick:', globalNavFns[fi] + '(' + dummyIdx + ') then ' + globalNavFns[fi] + '(' + saved.index + ')');
+          window[globalNavFns[fi]](dummyIdx);
+          window[globalNavFns[fi]](saved.index);
+          return;
+        }
+      }
+
+      // Strategy 3: Scan window for objects with slide-navigation methods
+      var skipKeys = ['history','location','navigator','performance','screen','localStorage',
+        'sessionStorage','caches','crypto','indexedDB','document','window','self','top',
+        'parent','frames','opener','external','chrome','speechSynthesis','visualViewport'];
+      var objNavMethods = ['goToSlide', 'goTo', 'slideTo', 'showSlide', 'navigateToSlide'];
+      var objIndexProps = ['currentSlide', 'currentIndex', 'activeIndex', 'slideIndex'];
+      var candidateKeys = Object.keys(window);
+      for (var ki = 0; ki < candidateKeys.length; ki++) {
+        var key = candidateKeys[ki];
+        if (skipKeys.indexOf(key) !== -1) continue;
+        try {
+          var obj = window[key];
+          if (!obj || typeof obj !== 'object' || obj === window || obj === document) continue;
+          if (obj instanceof HTMLElement || obj instanceof NodeList) continue;
+          for (var mi = 0; mi < objNavMethods.length; mi++) {
+            if (typeof obj[objNavMethods[mi]] === 'function') {
+              console.log('[bridge] generic: found nav method', key + '.' + objNavMethods[mi]);
+              obj[objNavMethods[mi]](saved.index);
+              return;
+            }
+          }
+          for (var pi = 0; pi < objIndexProps.length; pi++) {
+            if (typeof obj[objIndexProps[pi]] === 'number') {
+              console.log('[bridge] generic: found index prop', key + '.' + objIndexProps[pi]);
+              obj[objIndexProps[pi]] = saved.index;
+              return;
+            }
+          }
+        } catch(e) {}
+      }
+
+      console.log('[bridge] restoreFrameworkSlideIndex: generic — no controller found');
+      return;
+    }
+
+    console.log('[bridge] restoreFrameworkSlideIndex: no matching restore for', saved.framework);
+  }
+
+  // --- Slide CSS State Save/Restore (fallback for unknown frameworks) ---
 
   function getSlideSelector() {
     if (document.querySelectorAll('.reveal section:not(section section)').length > 1)
@@ -190,7 +435,6 @@ export function getBridgeScript(): string {
     if (sel) {
       slides = Array.prototype.slice.call(document.querySelectorAll(sel));
     } else {
-      // Fallback: body direct children (excluding bridge elements)
       var children = [];
       for (var i = 0; i < document.body.children.length; i++) {
         var ch = document.body.children[i];
@@ -244,6 +488,39 @@ export function getBridgeScript(): string {
       slides[i].style.opacity = st.opacity || '';
       slides[i].style.transform = st.transform || '';
     }
+  }
+
+  // --- Find DOM element at a character position in serialized HTML ---
+
+  function findElementAtHtmlPosition(html, charPos) {
+    // Find <body> position to count only body-internal tags
+    var bodyStart = html.indexOf('<body');
+    if (bodyStart === -1) bodyStart = 0;
+
+    // Count opening tags from <body> up to charPos (skip <body> itself)
+    var bodyTagEnd = html.indexOf('>', bodyStart);
+    var countStart = bodyTagEnd !== -1 ? bodyTagEnd + 1 : bodyStart;
+
+    var openTagCount = 0;
+    var tagRegex = /<([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
+    tagRegex.lastIndex = countStart;
+    var tagMatch;
+    while ((tagMatch = tagRegex.exec(html)) !== null) {
+      if (tagMatch.index > charPos) break;
+      openTagCount++;
+    }
+
+    // Map to DOM element by counting elements in order (skip bridge-injected ones)
+    var allElements = document.body.querySelectorAll('*');
+    var cleanIndex = 0;
+    for (var i = 0; i < allElements.length; i++) {
+      var ael = allElements[i];
+      if (ael.tagName === 'SCRIPT' && ael.hasAttribute('data-bridge')) continue;
+      if (ael.tagName === 'STYLE' && ael.hasAttribute('data-bridge-styles')) continue;
+      cleanIndex++;
+      if (cleanIndex >= openTagCount) return ael;
+    }
+    return null;
   }
 
   // --- Scroll State Save/Restore (handles container-based scrolling) ---
@@ -319,6 +596,17 @@ export function getBridgeScript(): string {
   // --- DOM Morph (for REPLACE_DOM - preserves event listeners) ---
 
   function morphAttributes(oldEl, newEl) {
+    // Preserve runtime values of form elements before morphing
+    var savedValue = null;
+    var savedChecked = null;
+    var isFormEl = false;
+    var tag = oldEl.tagName ? oldEl.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+      isFormEl = true;
+      savedValue = oldEl.value;
+      if (tag === 'input') savedChecked = oldEl.checked;
+    }
+
     // Remove attributes not in new element (skip bridge attrs)
     for (var i = oldEl.attributes.length - 1; i >= 0; i--) {
       var name = oldEl.attributes[i].name;
@@ -333,12 +621,21 @@ export function getBridgeScript(): string {
         oldEl.setAttribute(attr.name, attr.value);
       }
     }
+
+    // Restore runtime values (setAttribute resets .value for inputs)
+    if (isFormEl && savedValue !== null) {
+      oldEl.value = savedValue;
+      if (savedChecked !== null) oldEl.checked = savedChecked;
+    }
   }
 
   function morphNode(oldNode, newNode, parent) {
     // Text nodes
     if (oldNode.nodeType === 3 && newNode.nodeType === 3) {
-      if (oldNode.textContent !== newNode.textContent) oldNode.textContent = newNode.textContent;
+      if (oldNode.textContent !== newNode.textContent) {
+
+        oldNode.textContent = newNode.textContent;
+      }
       return;
     }
     // Comment nodes
@@ -349,6 +646,7 @@ export function getBridgeScript(): string {
     // Different type or tag → replace entirely
     if (oldNode.nodeType !== newNode.nodeType ||
         (oldNode.nodeType === 1 && newNode.nodeType === 1 && oldNode.tagName !== newNode.tagName)) {
+
       parent.replaceChild(document.importNode(newNode, true), oldNode);
       return;
     }
@@ -462,6 +760,14 @@ export function getBridgeScript(): string {
     el.contentEditable = 'true';
     el.focus();
 
+    // Block keyboard events from reaching slide frameworks while editing
+    function stopKeyPropagation(e) {
+      e.stopPropagation();
+    }
+    document.addEventListener('keydown', stopKeyPropagation, true);
+    document.addEventListener('keyup', stopKeyPropagation, true);
+    document.addEventListener('keypress', stopKeyPropagation, true);
+
     function sendTextChanged() {
       window.parent.postMessage({
         type: 'TEXT_CHANGED',
@@ -479,6 +785,9 @@ export function getBridgeScript(): string {
     function onBlur() {
       el.removeEventListener('blur', onBlur);
       el.removeEventListener('input', onInput);
+      document.removeEventListener('keydown', stopKeyPropagation, true);
+      document.removeEventListener('keyup', stopKeyPropagation, true);
+      document.removeEventListener('keypress', stopKeyPropagation, true);
       el.contentEditable = 'false';
       el.removeAttribute('contenteditable');
       sendTextChanged();
@@ -647,30 +956,109 @@ export function getBridgeScript(): string {
       }
     }
 
-    // --- DOM Replace via morph (preserves event listeners for undo/redo) ---
+    // --- DOM Replace via morph (preserves event listeners) ---
     if (msg.type === 'REPLACE_DOM' && msg.payload && msg.payload.html) {
-      // 1. Save viewport state (scroll + slide) before morph
       var scrollState = captureScrollState();
-      var isSlideDoc = detectPageTypeInIframe() === 'slides';
-      var savedSlideState = isSlideDoc ? captureSlideState() : null;
 
-      // 2. Morph content
       var parser = new DOMParser();
       var newDoc = parser.parseFromString(msg.payload.html, 'text/html');
       morphChildren(document.body, newDoc.body);
 
-      // 3. Synchronous restore (prevents MutationObserver race conditions)
-      if (isSlideDoc && savedSlideState) {
-        restoreSlideState(savedSlideState);
-      }
       restoreScrollState(scrollState);
 
-      // 4. Clear selection
       if (selectedEl) {
         selectedEl.removeAttribute('data-bridge-selected');
         selectedEl = null;
         window.parent.postMessage({ type: 'ELEMENT_SELECTED', payload: null }, '*');
       }
+    }
+
+    // --- Scroll to a specific element ---
+    if (msg.type === 'SCROLL_TO_ELEMENT' && msg.payload) {
+      var scrollTarget = null;
+      if (msg.payload.editorId) {
+        scrollTarget = document.querySelector('[data-editor-id="' + msg.payload.editorId + '"]');
+      }
+      if (!scrollTarget && msg.payload.selector) {
+        try { scrollTarget = document.querySelector(msg.payload.selector); } catch(e) {}
+      }
+      if (scrollTarget) {
+        scrollTarget.scrollIntoView({ behavior: msg.payload.behavior || 'smooth', block: 'center' });
+      }
+    }
+
+    // --- Scroll to element by HTML context (100-char raw HTML matching) ---
+    if (msg.type === 'SCROLL_TO_HTML_CONTEXT' && msg.payload) {
+      var hctx = msg.payload;
+      var searchStr = hctx.before + hctx.after;
+      var ctxCleanHtml = serializeDOM();
+      var ctxMatchPos = ctxCleanHtml.indexOf(searchStr);
+      if (ctxMatchPos === -1 && hctx.after) {
+        // Fallback: match after part only
+        ctxMatchPos = ctxCleanHtml.indexOf(hctx.after);
+      }
+      if (ctxMatchPos !== -1) {
+        // Find DOM element at the matched position
+        var targetCharPos = ctxMatchPos + (hctx.before ? hctx.before.length : 0);
+        var ctxTarget = findElementAtHtmlPosition(ctxCleanHtml, targetCharPos);
+        if (ctxTarget) {
+          ctxTarget.scrollIntoView({ behavior: 'instant', block: 'center' });
+        }
+      }
+    }
+
+    // --- Restore full scroll state (after iframe reload) ---
+    if (msg.type === 'RESTORE_SCROLL' && msg.payload && msg.payload.state) {
+      restoreScrollState(msg.payload.state);
+    }
+
+    // --- Navigate to specific slide (after iframe reload) ---
+    if (msg.type === 'NAVIGATE_TO_SLIDE' && msg.payload && msg.payload.index !== undefined) {
+      var targetIdx = msg.payload.index;
+      console.log('[bridge] NAVIGATE_TO_SLIDE: index=' + targetIdx);
+      // Reveal.js
+      if (window.Reveal && typeof window.Reveal.slide === 'function') {
+        window.Reveal.slide(targetIdx);
+        console.log('[bridge] Reveal.slide() called');
+        return;
+      }
+      // Swiper
+      var navSwiperEl = document.querySelector('.swiper');
+      if (navSwiperEl && navSwiperEl.swiper) {
+        navSwiperEl.swiper.slideTo(targetIdx, 0);
+        console.log('[bridge] swiper.slideTo() called');
+        return;
+      }
+      // Impress.js
+      if (window.impress && typeof window.impress === 'function') {
+        var impApi = window.impress();
+        if (impApi && typeof impApi.goto === 'function') {
+          var impSteps = document.querySelectorAll('.step');
+          if (targetIdx < impSteps.length) {
+            impApi.goto(targetIdx);
+            console.log('[bridge] impress.goto() called');
+            return;
+          }
+        }
+      }
+      // Slick (jQuery)
+      if (window.jQuery || window.$) {
+        var slickJq = window.jQuery || window.$;
+        var slickEl = slickJq('.slick-initialized');
+        if (slickEl && slickEl.length > 0 && slickEl.slick) {
+          try { slickEl.slick('slickGoTo', targetIdx, true); console.log('[bridge] slick.slickGoTo() called'); return; } catch(e) {}
+        }
+      }
+      // Generic: try common global navigation functions
+      var navFns = ['goTo', 'goToSlide', 'slideTo', 'showSlide', 'navigateToSlide'];
+      for (var nfi = 0; nfi < navFns.length; nfi++) {
+        if (typeof window[navFns[nfi]] === 'function') {
+          console.log('[bridge] calling window.' + navFns[nfi] + '(' + targetIdx + ')');
+          window[navFns[nfi]](targetIdx);
+          return;
+        }
+      }
+      console.log('[bridge] NAVIGATE_TO_SLIDE: no navigation method found');
     }
 
     // --- Section Detection ---
@@ -1250,6 +1638,36 @@ export function getBridgeScript(): string {
         });
       });
     }, 300);
+  }
+  // --- Slide index tracking: report current slide index to parent ---
+  var _slideSelector = getSlideSelector();
+  if (_slideSelector) {
+    var _slideEls = document.querySelectorAll(_slideSelector);
+    if (_slideEls.length > 1) {
+      var _slideObserver = new MutationObserver(function() {
+        var info = captureFrameworkSlideIndex();
+        if (info) {
+          window.parent.postMessage({
+            type: 'SLIDE_INDEX_CHANGED',
+            payload: { index: info.index, framework: info.framework }
+          }, '*');
+        }
+      });
+      for (var _si = 0; _si < _slideEls.length; _si++) {
+        _slideObserver.observe(_slideEls[_si], {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      }
+      // Report initial index
+      var _initInfo = captureFrameworkSlideIndex();
+      if (_initInfo) {
+        window.parent.postMessage({
+          type: 'SLIDE_INDEX_CHANGED',
+          payload: { index: _initInfo.index, framework: _initInfo.framework }
+        }, '*');
+      }
+    }
   }
 })();
 `;

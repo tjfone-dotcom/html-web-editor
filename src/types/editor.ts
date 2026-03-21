@@ -25,6 +25,10 @@ export interface SelectedElement {
   textContent?: string;
   /** Breadcrumb path of parent elements */
   path: string[];
+  /** Opening tag HTML for source matching */
+  openingTag?: string;
+  /** Raw HTML context (50 chars before + 50 chars after) for position matching */
+  htmlContext?: { before: string; after: string } | null;
 }
 
 /** A snapshot of the editor state for undo/redo */
@@ -35,6 +39,8 @@ export interface HistoryEntry {
   timestamp: number;
   /** Description of the change */
   description: string;
+  /** Slide index at the time of this edit (for slide deck documents) */
+  slideIndex?: number;
 }
 
 /** View mode for the preview panel */
@@ -100,6 +106,10 @@ export interface EditorState {
   isLoading: boolean;
   /** Flag set by undo/redo to signal DOM-only replacement instead of iframe reload */
   isUndoRedo: boolean;
+  /** Current slide index (updated by SLIDE_INDEX_CHANGED from bridge) */
+  currentSlideIndex: number;
+  /** Target slide index for undo/redo navigation */
+  undoRedoSlideIndex: number | null;
 
   // Actions
   setFileName: (name: string | null) => void;
@@ -118,4 +128,5 @@ export interface EditorState {
   redo: () => void;
   pushHistory: (entry: Omit<HistoryEntry, 'timestamp'>) => void;
   resetEditor: () => void;
+  loadFile: (content: string, fileName: string) => void;
 }

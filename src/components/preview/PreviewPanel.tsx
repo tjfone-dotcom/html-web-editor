@@ -115,9 +115,12 @@ export default function PreviewPanel() {
         <ViewToggle />
       </div>
 
-      {/* Content area */}
-      <div className="flex-1 overflow-hidden">
-        {viewMode === 'code' ? <CodeEditor /> : <HtmlPreview />}
+      {/* Content area — both always mounted, toggled via CSS */}
+      <div className={`flex-1 overflow-hidden ${viewMode === 'preview' ? '' : 'hidden'}`}>
+        <HtmlPreview />
+      </div>
+      <div className={`flex-1 overflow-hidden ${viewMode === 'code' ? '' : 'hidden'}`}>
+        <CodeEditor />
       </div>
     </div>
   );

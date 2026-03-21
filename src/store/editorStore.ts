@@ -25,6 +25,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   captureSettings: defaultCaptureSettings,
   isLoading: false,
   isUndoRedo: false,
+  currentSlideIndex: 0,
+  undoRedoSlideIndex: null,
 
   // Actions
   setFileName: (name: string | null) => set({ fileName: name }),
@@ -99,6 +101,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         historyIndex: newIndex,
         isDirty: state.history[newIndex].html !== state.originalHtmlContent,
         isUndoRedo: true,
+        undoRedoSlideIndex: state.history[newIndex].slideIndex ?? null,
       });
     }
   },
@@ -112,6 +115,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         historyIndex: newIndex,
         isDirty: state.history[newIndex].html !== state.originalHtmlContent,
         isUndoRedo: true,
+        undoRedoSlideIndex: state.history[newIndex].slideIndex ?? null,
       });
     }
   },
@@ -121,7 +125,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       // Truncate future entries if we're not at the end
       const truncated = state.history.slice(0, state.historyIndex + 1);
 
-      const newEntry = { ...entry, timestamp: Date.now() };
+      const newEntry = { ...entry, timestamp: Date.now(), slideIndex: state.currentSlideIndex };
       const newHistory = [...truncated, newEntry];
 
       // Cap at MAX_HISTORY
@@ -150,5 +154,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       captureSettings: defaultCaptureSettings,
       isLoading: false,
       isUndoRedo: false,
+      currentSlideIndex: 0,
+      undoRedoSlideIndex: null,
+    }),
+
+  loadFile: (content: string, fileName: string) =>
+    set({
+      fileName,
+      htmlContent: content,
+      originalHtmlContent: content,
+      selectedElement: null,
+      history: [{ html: content, description: '파일 업로드', timestamp: Date.now() }],
+      historyIndex: 0,
+      isDirty: false,
+      isClassApply: false,
+      selectedClass: null,
+      isUndoRedo: false,
+      currentSlideIndex: 0,
+      undoRedoSlideIndex: null,
     }),
 }));

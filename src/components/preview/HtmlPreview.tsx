@@ -1,12 +1,41 @@
 import { useEffect, useRef, useState, useCallback, type SyntheticEvent } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { getBridgeScript } from '../../bridge/bridge';
+import { lastCursorLine, findHtmlContextAtLine } from '../../utils/codeSync';
+
+/** Detect slide-deck documents by checking for common slide framework patterns */
+function isSlideDocument(html: string): boolean {
+  return /class="[^"]*\bslide\b/.test(html) ||
+         /\.reveal\b/.test(html) ||
+         /Reveal\.initialize/.test(html) ||
+         /class="[^"]*\bswiper\b/.test(html) ||
+         /class="[^"]*\bstep\b[^"]*"/.test(html) ||
+         /\.slick\(/.test(html);
+}
+
+/** Compute child-index path from root to element (mirrors bridge's getNodeIndexPath) */
+function getNodePath(el: Element, root: Element): number[] {
+  const path: number[] = [];
+  let cur: Element | null = el;
+  while (cur && cur !== root) {
+    const parent = cur.parentElement;
+    if (!parent) break;
+    let idx = 0;
+    for (let i = 0; i < parent.children.length; i++) {
+      if (parent.children[i] === cur) { idx = i; break; }
+    }
+    path.unshift(idx);
+    cur = parent;
+  }
+  return path;
+}
 
 export default function HtmlPreview() {
   const htmlContent = useEditorStore((s) => s.htmlContent);
   const setSelectedElement = useEditorStore((s) => s.setSelectedElement);
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
   const isUndoRedo = useEditorStore((s) => s.isUndoRedo);
+  const viewMode = useEditorStore((s) => s.viewMode);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
   const prevBlobUrlRef = useRef<string | null>(null);
@@ -15,6 +44,17 @@ export default function HtmlPreview() {
   const suppressNextUpdate = useRef(false);
   // Debounce timer for DOM_UPDATED history pushes
   const domUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Flag: content changed while in code mode, needs sync on switch back
+  const needsSyncRef = useRef(false);
+  // Slide index tracking: updated by SLIDE_INDEX_CHANGED messages from bridge
+  const slideIndexRef = useRef<number>(0);
+  // Pending slide navigation after iframe reload
+  const pendingSlideNavRef = useRef<number | null>(null);
+  // Pending scroll state restore after iframe reload
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pendingScrollRestore = useRef<any[] | null>(null);
+  // Pending HTML context scroll after iframe reload (code→preview)
+  const pendingHtmlContext = useRef<{ before: string; after: string } | null>(null);
 
   /** Inject bridge script and html2canvas into HTML before </body> or at end */
   const injectBridge = useCallback((html: string): string => {
@@ -28,16 +68,82 @@ export default function HtmlPreview() {
     return html + scripts;
   }, []);
 
+  /** Create a new blob URL and set it (triggers iframe reload) */
+  const reloadIframe = useCallback((html: string) => {
+    if (prevBlobUrlRef.current) {
+      URL.revokeObjectURL(prevBlobUrlRef.current);
+    }
+    const injected = injectBridge(html);
+    const blob = new Blob([injected], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    setIsIframeLoading(true);
+    setBlobUrl(url);
+    prevBlobUrlRef.current = url;
+  }, [injectBridge]);
+
+  /**
+   * Synchronously capture scroll state from iframe (all scrollable elements).
+   * Works because sandbox="allow-scripts allow-same-origin" + blob URL = same origin.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const captureIframeScroll = useCallback((): any[] | null => {
+    try {
+      const win = iframeRef.current?.contentWindow;
+      if (!win) return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results: any[] = [];
+      // Window scroll
+      results.push({ type: 'window', scrollX: win.scrollX, scrollY: win.scrollY });
+      // documentElement
+      if (win.document.documentElement.scrollTop > 0 || win.document.documentElement.scrollLeft > 0) {
+        results.push({
+          type: 'docEl',
+          scrollTop: win.document.documentElement.scrollTop,
+          scrollLeft: win.document.documentElement.scrollLeft,
+        });
+      }
+      // body
+      if (win.document.body && (win.document.body.scrollTop > 0 || win.document.body.scrollLeft > 0)) {
+        results.push({
+          type: 'body',
+          scrollTop: win.document.body.scrollTop,
+          scrollLeft: win.document.body.scrollLeft,
+        });
+      }
+      // All scrollable internal containers
+      const all = win.document.body?.querySelectorAll('*') || [];
+      for (let i = 0; i < all.length; i++) {
+        const el = all[i] as HTMLElement;
+        if (el.scrollTop === 0 && el.scrollLeft === 0) continue;
+        const cs = win.getComputedStyle(el);
+        const ov = cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY;
+        if (ov.includes('auto') || ov.includes('scroll')) {
+          const path = getNodePath(el, win.document.body);
+          results.push({ type: 'element', path, scrollTop: el.scrollTop, scrollLeft: el.scrollLeft });
+        }
+      }
+      return results.length > 0 ? results : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     if (htmlContent) {
-      // Undo/redo: send REPLACE_DOM instead of reloading iframe
+      // Undo/redo
       if (isUndoRedo) {
         useEditorStore.setState({ isUndoRedo: false });
-        if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage({
-            type: 'REPLACE_DOM',
-            payload: { html: htmlContent },
-          }, '*');
+
+        if (isSlideDocument(htmlContent)) {
+          // Slide deck: full reload + navigate to slide saved in history
+          const targetSlide = useEditorStore.getState().undoRedoSlideIndex;
+          useEditorStore.setState({ undoRedoSlideIndex: null });
+          pendingSlideNavRef.current = targetSlide ?? slideIndexRef.current;
+          reloadIframe(htmlContent);
+        } else {
+          // Scroll document: synchronously capture scroll → reload → restore
+          pendingScrollRestore.current = captureIframeScroll();
+          reloadIframe(htmlContent);
         }
         return;
       }
@@ -47,17 +153,14 @@ export default function HtmlPreview() {
         return;
       }
 
-      // Revoke previous Blob URL
-      if (prevBlobUrlRef.current) {
-        URL.revokeObjectURL(prevBlobUrlRef.current);
+      // In code mode, skip blob recreation — sync when switching back
+      if (viewMode === 'code') {
+        needsSyncRef.current = true;
+        return;
       }
 
-      const injected = injectBridge(htmlContent);
-      const blob = new Blob([injected], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setIsIframeLoading(true);
-      setBlobUrl(url);
-      prevBlobUrlRef.current = url;
+      // Normal content update: create blob URL
+      reloadIframe(htmlContent);
     } else {
       if (prevBlobUrlRef.current) {
         URL.revokeObjectURL(prevBlobUrlRef.current);
@@ -73,7 +176,51 @@ export default function HtmlPreview() {
         prevBlobUrlRef.current = null;
       }
     };
-  }, [htmlContent, injectBridge, isUndoRedo]);
+  }, [htmlContent, isUndoRedo, viewMode, reloadIframe, captureIframeScroll]);
+
+  // When switching back to preview, sync code edits and scroll to cursor position
+  useEffect(() => {
+    if (viewMode === 'preview') {
+      const cursorLine = lastCursorLine.value;
+      lastCursorLine.value = null;
+
+      if (needsSyncRef.current) {
+        needsSyncRef.current = false;
+        const currentHtml = useEditorStore.getState().htmlContent;
+        if (currentHtml) {
+          if (isSlideDocument(currentHtml)) {
+            // Slide deck: stay on current slide after code edits
+            pendingSlideNavRef.current = slideIndexRef.current;
+            reloadIframe(currentHtml);
+          } else if (cursorLine) {
+            // Code→preview with cursor: scroll to cursor element after reload
+            pendingHtmlContext.current = findHtmlContextAtLine(currentHtml, cursorLine);
+            reloadIframe(currentHtml);
+          } else {
+            // Code edits but no cursor info: capture scroll → reload → restore
+            pendingScrollRestore.current = captureIframeScroll();
+            reloadIframe(currentHtml);
+          }
+        }
+      } else if (cursorLine) {
+        // No code edits, but navigate to cursor position (iframe already alive)
+        const currentHtml = useEditorStore.getState().htmlContent;
+        if (currentHtml && iframeRef.current?.contentWindow) {
+          if (isSlideDocument(currentHtml)) {
+            // Slide deck without edits: stay on current slide (no navigation needed)
+          } else {
+            const ctx = findHtmlContextAtLine(currentHtml, cursorLine);
+            if (ctx) {
+              iframeRef.current.contentWindow.postMessage({
+                type: 'SCROLL_TO_HTML_CONTEXT',
+                payload: ctx,
+              }, '*');
+            }
+          }
+        }
+      }
+    }
+  }, [viewMode, reloadIframe, captureIframeScroll]);
 
   // Listen for messages from iframe
   useEffect(() => {
@@ -104,6 +251,15 @@ export default function HtmlPreview() {
           setSelectedElement({ ...current, textContent: msg.payload.text });
         }
       }
+
+      // Track current slide index from bridge
+      if (msg.type === 'SLIDE_INDEX_CHANGED' && msg.payload) {
+        // Skip update during reload (pending navigation) to prevent bridge init overwriting saved index
+        if (pendingSlideNavRef.current === null) {
+          slideIndexRef.current = msg.payload.index;
+          useEditorStore.setState({ currentSlideIndex: msg.payload.index });
+        }
+      }
     }
 
     window.addEventListener('message', handleMessage);
@@ -129,6 +285,44 @@ export default function HtmlPreview() {
 
   const handleIframeLoad = useCallback((_e: SyntheticEvent<HTMLIFrameElement>) => {
     setIsIframeLoading(false);
+
+    // Slide deck: navigate to saved slide index
+    if (pendingSlideNavRef.current !== null && iframeRef.current?.contentWindow) {
+      const idx = pendingSlideNavRef.current;
+      pendingSlideNavRef.current = null;
+      setTimeout(() => {
+        iframeRef.current?.contentWindow?.postMessage({
+          type: 'NAVIGATE_TO_SLIDE',
+          payload: { index: idx },
+        }, '*');
+      }, 200);
+      return;
+    }
+
+    // HTML context scroll (code→preview)
+    if (pendingHtmlContext.current && iframeRef.current?.contentWindow) {
+      const ctx = pendingHtmlContext.current;
+      pendingHtmlContext.current = null;
+      setTimeout(() => {
+        iframeRef.current?.contentWindow?.postMessage({
+          type: 'SCROLL_TO_HTML_CONTEXT',
+          payload: ctx,
+        }, '*');
+      }, 300);
+      return;
+    }
+
+    // Scroll position restore (undo/redo)
+    if (pendingScrollRestore.current && iframeRef.current?.contentWindow) {
+      const state = pendingScrollRestore.current;
+      pendingScrollRestore.current = null;
+      setTimeout(() => {
+        iframeRef.current?.contentWindow?.postMessage({
+          type: 'RESTORE_SCROLL',
+          payload: { state },
+        }, '*');
+      }, 300);
+    }
   }, []);
 
   if (!blobUrl) {

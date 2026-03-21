@@ -1,5 +1,11 @@
 import { useEditorStore } from '../../store/editorStore';
 import type { ViewMode } from '../../types/editor';
+import {
+  monacoEditorInstance,
+  findLineForSelectedElement,
+  lastCursorLine,
+  pendingCodeScroll,
+} from '../../utils/codeSync';
 
 const tabs: { mode: ViewMode; label: string }[] = [
   { mode: 'preview', label: '프리뷰' },
@@ -15,7 +21,27 @@ export default function ViewToggle() {
       {tabs.map(({ mode, label }) => (
         <button
           key={mode}
-          onClick={() => setViewMode(mode)}
+          onClick={() => {
+            if (mode === viewMode) return;
+
+            if (mode === 'preview') {
+              // Code→Preview: save Monaco cursor line before switching
+              lastCursorLine.value = monacoEditorInstance?.getPosition()?.lineNumber ?? null;
+            }
+
+            if (mode === 'code') {
+              // Preview→Code: save scroll target line (CodeEditor handles the actual scroll)
+              const { selectedElement, htmlContent } = useEditorStore.getState();
+              if (selectedElement && htmlContent) {
+                pendingCodeScroll.line = findLineForSelectedElement(htmlContent, selectedElement);
+              } else {
+                pendingCodeScroll.line = null;
+              }
+            }
+
+            // Switch view — no Monaco manipulation here
+            setViewMode(mode);
+          }}
           className={`
             px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer
             ${viewMode === mode

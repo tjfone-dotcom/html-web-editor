@@ -15,7 +15,7 @@ function validateFile(file: File): string | null {
 }
 
 export default function FileUploader() {
-  const { htmlContent, setHtmlContent, setFileName, setIsLoading } = useEditorStore();
+  const { htmlContent, loadFile, setIsLoading } = useEditorStore();
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,8 +39,7 @@ export default function FileUploader() {
           setIsLoading(false);
           return;
         }
-        setFileName(file.name);
-        setHtmlContent(content, '파일 업로드');
+        loadFile(content, file.name);
         setIsLoading(false);
       };
       reader.onerror = () => {
@@ -49,7 +48,7 @@ export default function FileUploader() {
       };
       reader.readAsText(file);
     },
-    [setHtmlContent, setFileName, setIsLoading],
+    [loadFile, setIsLoading],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
