@@ -111,6 +111,17 @@ export default function Header() {
             </button>
           ))}
         </div>
+
+        {/* Manual button */}
+        <div className="flex items-center border-l border-gray-700 ml-1 pl-3">
+          <button
+            onClick={() => window.open(`/manual.html?lang=${locale}`, '_blank')}
+            title={t('openManual')}
+            className="w-7 h-7 flex items-center justify-center rounded text-base hover:bg-gray-700 transition-colors"
+          >
+            💡
+          </button>
+        </div>
       </div>
     </header>
   );

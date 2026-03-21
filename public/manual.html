@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTML 편집기 사용 설명서</title>
+  <title>SoEZ HTML — Manual</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -30,8 +30,39 @@
       font-size: 15px;
     }
 
+    /* ── Lang bar ── */
+    .lang-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lang-bar span {
+      font-size: 11px;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+    .lang-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+      transition: background .15s;
+      line-height: 1.8;
+    }
+    .lang-btn:hover { background: var(--bg3); }
+    .lang-btn.active { border-color: var(--accent); background: rgba(79,142,247,.12); }
+
     /* ── Layout ── */
-    .layout { display: flex; min-height: 100vh; }
+    .layout { display: flex; min-height: calc(100vh - 41px); }
 
     /* ── Sidebar ── */
     .sidebar {
@@ -41,8 +72,8 @@
       border-right: 1px solid var(--border);
       padding: 28px 0 40px;
       position: sticky;
-      top: 0;
-      height: 100vh;
+      top: 41px;
+      height: calc(100vh - 41px);
       overflow-y: auto;
     }
     .sidebar-logo {
@@ -84,7 +115,7 @@
       margin: 52px 0 16px;
       padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
-      scroll-margin-top: 32px;
+      scroll-margin-top: 72px;
     }
     h3 { font-size: 15.5px; font-weight: 600; margin: 28px 0 10px; color: var(--accent); }
     p { margin-bottom: 12px; color: #c8ccdf; }
@@ -300,329 +331,960 @@
 </head>
 <body>
 
+<!-- Language switcher bar -->
+<div class="lang-bar">
+  <span id="lb-lang"></span>
+  <button class="lang-btn" data-lang="en">🇺🇸 English</button>
+  <button class="lang-btn" data-lang="ko">🇰🇷 한국어</button>
+  <button class="lang-btn" data-lang="ja">🇯🇵 日本語</button>
+  <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+</div>
+
 <div class="layout">
 
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="sidebar-logo">HTML 편집기<span>사용 설명서</span></div>
+    <div class="sidebar-logo">SoEZ HTML<span id="sb-subtitle"></span></div>
 
     <div class="nav-group">
-      <div class="nav-label">시작하기</div>
-      <a class="nav-link" href="#overview">개요</a>
-      <a class="nav-link" href="#quickstart">빠른 시작</a>
-      <a class="nav-link" href="#layout">화면 구성</a>
+      <div class="nav-label" id="nav-g1"></div>
+      <a class="nav-link" href="#overview"   id="nav-overview"></a>
+      <a class="nav-link" href="#quickstart" id="nav-quickstart"></a>
+      <a class="nav-link" href="#layout"     id="nav-layout"></a>
     </div>
 
     <div class="nav-group">
-      <div class="nav-label">핵심 기능</div>
-      <a class="nav-link" href="#upload">파일 열기</a>
-      <a class="nav-link" href="#select">요소 선택</a>
-      <a class="nav-link" href="#edit">속성 편집</a>
-      <a class="nav-link" href="#viewmode">뷰 모드</a>
+      <div class="nav-label" id="nav-g2"></div>
+      <a class="nav-link" href="#upload"   id="nav-upload"></a>
+      <a class="nav-link" href="#select"   id="nav-select"></a>
+      <a class="nav-link" href="#edit"     id="nav-edit"></a>
+      <a class="nav-link" href="#viewmode" id="nav-viewmode"></a>
     </div>
 
     <div class="nav-group">
-      <div class="nav-label">고급 기능</div>
-      <a class="nav-link" href="#class-apply">클래스 일괄 적용</a>
-      <a class="nav-link" href="#undo">실행 취소/다시 실행</a>
-      <a class="nav-link" href="#capture">이미지 캡쳐</a>
-      <a class="nav-link" href="#save">저장</a>
+      <div class="nav-label" id="nav-g3"></div>
+      <a class="nav-link" href="#class-apply" id="nav-class-apply"></a>
+      <a class="nav-link" href="#undo"        id="nav-undo"></a>
+      <a class="nav-link" href="#capture"     id="nav-capture"></a>
+      <a class="nav-link" href="#save"        id="nav-save"></a>
     </div>
 
     <div class="nav-group">
-      <div class="nav-label">참고</div>
-      <a class="nav-link" href="#elements">요소 유형</a>
-      <a class="nav-link" href="#shortcuts">단축키</a>
+      <div class="nav-label" id="nav-g4"></div>
+      <a class="nav-link" href="#elements"  id="nav-elements"></a>
+      <a class="nav-link" href="#shortcuts" id="nav-shortcuts"></a>
     </div>
   </nav>
 
   <!-- Main content -->
-  <main class="content">
+  <main class="content" id="main-content"></main>
 
-    <h1>HTML 편집기 사용 설명서<span class="sub">비개발자를 위한 시각적 HTML 편집 도구</span></h1>
-
-    <div class="hero">
-      <p>HTML 편집기는 코드를 몰라도 HTML 파일을 시각적으로 수정할 수 있는 도구입니다. 요소를 클릭하여 선택하고, 왼쪽 패널에서 색상·크기·여백 등을 조정하면 즉시 미리보기에 반영됩니다.</p>
-    </div>
-
-    <!-- ────────── 개요 ────────── -->
-    <h2 id="overview">개요</h2>
-    <div class="cards">
-      <div class="card">
-        <div class="card-icon">🎯</div>
-        <h4>시각적 편집</h4>
-        <p>요소를 클릭하면 해당 속성을 패널에서 즉시 편집할 수 있습니다.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">⚡</div>
-        <h4>실시간 미리보기</h4>
-        <p>변경 사항이 바로 미리보기에 반영됩니다. 코드 뷰로 전환하여 직접 수정도 가능합니다.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">↩️</div>
-        <h4>실행 취소/다시 실행</h4>
-        <p>최대 50단계 이력 관리로 실수를 쉽게 되돌릴 수 있습니다.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">📸</div>
-        <h4>이미지 캡쳐</h4>
-        <p>페이지 섹션을 자동 감지하여 고해상도 이미지로 내보낼 수 있습니다.</p>
-      </div>
-    </div>
-
-    <!-- ────────── 빠른 시작 ────────── -->
-    <h2 id="quickstart">빠른 시작</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body"><strong>파일 열기</strong> — 왼쪽 패널의 업로드 영역에 <code>.html</code> 파일을 드래그하거나 클릭하여 선택합니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body"><strong>요소 선택</strong> — 미리보기에서 편집할 요소를 클릭합니다. 왼쪽 패널에 해당 속성이 표시됩니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body"><strong>속성 편집</strong> — 색상, 크기, 텍스트 등 원하는 속성을 조정합니다. 변경 사항이 즉시 미리보기에 반영됩니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body"><strong>저장</strong> — 상단 <strong>저장</strong> 버튼(<kbd>Ctrl</kbd>+<kbd>S</kbd>)을 클릭하여 수정된 HTML 파일을 다운로드합니다.</div>
-      </div>
-    </div>
-
-    <!-- ────────── 화면 구성 ────────── -->
-    <h2 id="layout">화면 구성</h2>
-
-    <div class="layout-diagram">
-      <div class="ld-header">
-        <span><b>상단 툴바</b> — 파일명 · 실행 취소 · 다시 실행 · 원본 복원 · 저장</span>
-      </div>
-      <div class="ld-body">
-        <div class="ld-left">
-          <b>왼쪽 패널 (380px)</b>
-          파일 업로드<br>요소 정보<br>속성 편집<br>이미지 캡쳐
-        </div>
-        <div class="ld-main">
-          <b>오른쪽 패널 (나머지 영역)</b>
-          프리뷰 / 코드 뷰 전환<br><br>
-          HTML 렌더링 미리보기<br>또는 Monaco 코드 에디터
-        </div>
-      </div>
-      <div class="ld-status">하단 상태바 — 선택된 요소의 부모 경로 표시 (예: body &gt; div &gt; p)</div>
-    </div>
-
-    <table>
-      <thead><tr><th>영역</th><th>설명</th></tr></thead>
-      <tbody>
-        <tr><td><strong>상단 툴바</strong></td><td>파일명 표시, 실행 취소/다시 실행, 원본 복원, 저장 버튼</td></tr>
-        <tr><td><strong>왼쪽 패널</strong></td><td>파일 업로드, 선택된 요소 정보, 속성 편집기, 이미지 캡쳐</td></tr>
-        <tr><td><strong>오른쪽 패널</strong></td><td>프리뷰(기본) 또는 코드 뷰 전환 가능</td></tr>
-        <tr><td><strong>하단 상태바</strong></td><td>현재 선택된 요소의 DOM 경로 표시</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ────────── 파일 열기 ────────── -->
-    <h2 id="upload">파일 열기</h2>
-    <p>왼쪽 패널 상단의 업로드 영역을 통해 파일을 불러옵니다.</p>
-    <ul>
-      <li><strong>드래그 앤 드롭</strong> — <code>.html</code>, <code>.htm</code> 파일을 영역 위로 드래그합니다.</li>
-      <li><strong>클릭하여 찾아보기</strong> — 업로드 영역 또는 <strong>파일 변경</strong> 버튼을 클릭합니다.</li>
-      <li><strong>붙여넣기</strong> — 파일을 클립보드에 복사한 뒤 붙여넣습니다.</li>
-    </ul>
-    <div class="warn">파일 크기는 최대 <strong>10MB</strong>입니다. 이미 파일이 열려 있을 때 새 파일을 불러오면 기존 편집 내용이 초기화됩니다.</div>
-
-    <!-- ────────── 요소 선택 ────────── -->
-    <h2 id="select">요소 선택</h2>
-    <p>미리보기에서 편집할 요소를 클릭합니다. 선택된 요소는 강조 표시되며 왼쪽 패널에 상세 정보가 나타납니다.</p>
-
-    <h3>요소 정보 패널</h3>
-    <div class="prop-group">
-      <div class="prop-group-header">표시 항목</div>
-      <div class="prop-row"><div class="prop-name">태그</div><div class="prop-desc">선택된 요소의 HTML 태그 (예: <code>&lt;div&gt;</code>)</div></div>
-      <div class="prop-row"><div class="prop-name">유형 뱃지</div><div class="prop-desc">텍스트 · 버튼 · 박스 · 이미지 · 선 · 미지원 중 하나</div></div>
-      <div class="prop-row"><div class="prop-name">ID</div><div class="prop-desc">요소의 <code>id</code> 속성 (노란색으로 표시)</div></div>
-      <div class="prop-row"><div class="prop-name">클래스</div><div class="prop-desc">적용된 CSS 클래스 목록 (파란색으로 표시)</div></div>
-    </div>
-
-    <h3>요소 탐색 버튼</h3>
-    <ul>
-      <li><strong>▲ 위쪽 화살표</strong> — 부모 요소로 선택 이동</li>
-      <li><strong>▼ 아래쪽 화살표</strong> — 첫 번째 자식 요소로 선택 이동</li>
-    </ul>
-
-    <!-- ────────── 속성 편집 ────────── -->
-    <h2 id="edit">속성 편집</h2>
-    <p>선택된 요소의 유형에 따라 편집 가능한 속성이 다르게 표시됩니다.</p>
-
-    <h3>텍스트 요소 (<code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1&gt;</code> 등)</h3>
-    <div class="prop-group">
-      <div class="prop-row"><div class="prop-name">텍스트 내용</div><div class="prop-desc">직접 텍스트를 입력하여 수정</div></div>
-      <div class="prop-row"><div class="prop-name">글자 크기</div><div class="prop-desc">8 ~ 120px 슬라이더</div></div>
-      <div class="prop-row"><div class="prop-name">폰트</div><div class="prop-desc">폰트 패밀리 드롭다운 선택</div></div>
-      <div class="prop-row"><div class="prop-name">굵기</div><div class="prop-desc">100 ~ 900 (Thin ~ Black)</div></div>
-      <div class="prop-row"><div class="prop-name">이탤릭</div><div class="prop-desc">기울임 토글 버튼</div></div>
-      <div class="prop-row"><div class="prop-name">글자 색</div><div class="prop-desc">컬러 피커</div></div>
-      <div class="prop-row"><div class="prop-name">정렬</div><div class="prop-desc">왼쪽 / 가운데 / 오른쪽 / 양쪽</div></div>
-      <div class="prop-row"><div class="prop-name">줄 높이</div><div class="prop-desc">0.5 ~ 3x 슬라이더</div></div>
-      <div class="prop-row"><div class="prop-name">자간</div><div class="prop-desc">-5 ~ 20px 슬라이더</div></div>
-    </div>
-
-    <h3>버튼 요소 (<code>&lt;button&gt;</code>)</h3>
-    <div class="prop-group">
-      <div class="prop-row"><div class="prop-name">텍스트 내용</div><div class="prop-desc">버튼 레이블 수정</div></div>
-      <div class="prop-row"><div class="prop-name">배경색 / 글자 색</div><div class="prop-desc">각각 컬러 피커</div></div>
-      <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px (테두리 반경)</div></div>
-      <div class="prop-row"><div class="prop-name">테두리</div><div class="prop-desc">두께 · 스타일 · 색상</div></div>
-      <div class="prop-row"><div class="prop-name">안쪽 여백</div><div class="prop-desc">상/우/하/좌 패딩 개별 조정</div></div>
-      <div class="prop-row"><div class="prop-name">글자 크기</div><div class="prop-desc">8 ~ 72px</div></div>
-    </div>
-
-    <h3>박스 요소 (<code>&lt;div&gt;</code>, <code>&lt;section&gt;</code> 등)</h3>
-    <div class="prop-group">
-      <div class="prop-row"><div class="prop-name">배경색</div><div class="prop-desc">컬러 피커</div></div>
-      <div class="prop-row"><div class="prop-name">배경 이미지</div><div class="prop-desc">이미지 URL 직접 입력</div></div>
-      <div class="prop-row"><div class="prop-name">테두리</div><div class="prop-desc">두께 · 스타일 · 색상</div></div>
-      <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px</div></div>
-      <div class="prop-row"><div class="prop-name">안쪽 여백</div><div class="prop-desc">상/우/하/좌 패딩</div></div>
-      <div class="prop-row"><div class="prop-name">바깥 여백</div><div class="prop-desc">상/우/하/좌 마진</div></div>
-      <div class="prop-row"><div class="prop-name">그림자</div><div class="prop-desc">X · Y 오프셋, 흐림, 확산, 색상</div></div>
-    </div>
-
-    <h3>이미지 요소 (<code>&lt;img&gt;</code>)</h3>
-    <div class="prop-group">
-      <div class="prop-row"><div class="prop-name">이미지 파일</div><div class="prop-desc">파일 선택 버튼으로 교체 (데이터 URI로 삽입)</div></div>
-      <div class="prop-row"><div class="prop-name">너비 / 높이</div><div class="prop-desc">0 ~ 2000px (비율 고정 토글 있음)</div></div>
-      <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px</div></div>
-      <div class="prop-row"><div class="prop-name">투명도</div><div class="prop-desc">0 ~ 1</div></div>
-      <div class="prop-row"><div class="prop-name">맞춤</div><div class="prop-desc">cover / contain / fill / none / scale-down</div></div>
-    </div>
-
-    <h3>선 요소 (<code>&lt;hr&gt;</code>)</h3>
-    <div class="prop-group">
-      <div class="prop-row"><div class="prop-name">선 색상</div><div class="prop-desc">컬러 피커</div></div>
-      <div class="prop-row"><div class="prop-name">선 두께</div><div class="prop-desc">0 ~ 20px</div></div>
-      <div class="prop-row"><div class="prop-name">선 스타일</div><div class="prop-desc">실선 / 파선 / 점선</div></div>
-      <div class="prop-row"><div class="prop-name">너비</div><div class="prop-desc">0 ~ 100%</div></div>
-    </div>
-
-    <!-- ────────── 뷰 모드 ────────── -->
-    <h2 id="viewmode">뷰 모드 전환</h2>
-    <p>오른쪽 패널 상단의 <strong>프리뷰 / 코드</strong> 버튼으로 뷰를 전환합니다.</p>
-
-    <table>
-      <thead><tr><th>모드</th><th>설명</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><strong>프리뷰</strong></td>
-          <td>HTML이 렌더링된 실제 화면. 요소를 클릭하여 선택 및 편집. 슬라이드덱·인터랙티브 요소도 동작.</td>
-        </tr>
-        <tr>
-          <td><strong>코드</strong></td>
-          <td>Monaco 코드 에디터(VS Code 방식). HTML 구문 강조, 자동 완성. 코드 수정 후 프리뷰로 전환 시 자동 동기화.</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="note">프리뷰에서 요소를 선택한 뒤 코드 뷰로 전환하면 해당 요소가 있는 코드 라인으로 자동 스크롤되고 하이라이트됩니다.</div>
-
-    <!-- ────────── 클래스 일괄 적용 ────────── -->
-    <h2 id="class-apply">클래스 일괄 적용</h2>
-    <p>같은 클래스를 가진 모든 요소에 속성 변경을 한 번에 적용하는 기능입니다.</p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">클래스가 있는 요소를 선택합니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">왼쪽 패널의 <strong>"같은 클래스에 모두 적용"</strong> 체크박스를 활성화합니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">드롭다운에서 편집할 클래스를 선택합니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">속성을 변경하면 해당 클래스를 가진 <strong>모든 요소</strong>에 동시 적용됩니다.</div>
-      </div>
-    </div>
-
-    <!-- ────────── 실행 취소 ────────── -->
-    <h2 id="undo">실행 취소 / 다시 실행</h2>
-    <p>상단 툴바 또는 단축키로 변경 이력을 탐색합니다. 최대 <strong>50단계</strong>까지 이력이 유지됩니다.</p>
-
-    <table>
-      <thead><tr><th>버튼</th><th>단축키</th><th>동작</th></tr></thead>
-      <tbody>
-        <tr><td><strong>실행 취소</strong></td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>직전 변경을 되돌립니다.</td></tr>
-        <tr><td><strong>다시 실행</strong></td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> 또는 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>취소한 변경을 다시 적용합니다.</td></tr>
-        <tr><td><strong>원본 복원</strong></td><td>—</td><td>파일을 처음 열었을 때 상태로 완전히 되돌립니다.</td></tr>
-      </tbody>
-    </table>
-
-    <div class="note">슬라이드덱 HTML에서 실행 취소/다시 실행 시, 변경했던 슬라이드 페이지로 자동 이동합니다.</div>
-
-    <!-- ────────── 이미지 캡쳐 ────────── -->
-    <h2 id="capture">이미지 캡쳐</h2>
-    <p>페이지를 섹션별로 나눠 고해상도 이미지로 내보냅니다. 왼쪽 패널 하단 <strong>캡쳐</strong> 영역에서 사용합니다.</p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body"><strong>형식</strong>(JPG / PNG)과 <strong>해상도</strong>(1x / 2x / 3x)를 선택합니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body"><strong>섹션 감지</strong> 버튼을 클릭합니다. 페이지의 구분 섹션이 자동으로 감지됩니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">감지된 섹션 목록과 높이를 확인합니다. 원하지 않을 경우 <strong>초기화</strong> 후 다시 감지합니다.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body"><strong>캡쳐</strong> 버튼을 클릭합니다. 진행바가 표시되고 완료되면 ZIP 파일이 다운로드됩니다.</div>
-      </div>
-    </div>
-
-    <div class="warn">캡쳐는 <strong>프리뷰 모드</strong>에서만 작동합니다. 코드 뷰에서는 먼저 프리뷰로 전환하세요.</div>
-
-    <!-- ────────── 저장 ────────── -->
-    <h2 id="save">저장</h2>
-    <p>상단 <strong>저장</strong> 버튼 또는 <kbd>Ctrl</kbd>+<kbd>S</kbd>를 누르면 수정된 HTML 파일이 컴퓨터에 다운로드됩니다.</p>
-    <div class="warn"><strong>자동 저장은 없습니다.</strong> 중요한 변경 후에는 수동으로 저장하세요. 브라우저를 닫으면 저장하지 않은 변경 사항이 사라집니다.</div>
-
-    <!-- ────────── 요소 유형 ────────── -->
-    <h2 id="elements">요소 유형 참고</h2>
-    <table>
-      <thead><tr><th>유형</th><th>뱃지</th><th>해당 태그</th><th>편집 가능</th></tr></thead>
-      <tbody>
-        <tr><td>텍스트</td><td><span class="badge badge-blue">텍스트</span></td><td><code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1~6&gt;</code>, <code>&lt;li&gt;</code> 등</td><td>✅</td></tr>
-        <tr><td>버튼</td><td><span class="badge badge-green">버튼</span></td><td><code>&lt;button&gt;</code>, <code>&lt;a&gt;</code></td><td>✅</td></tr>
-        <tr><td>박스</td><td><span class="badge badge-gray">박스</span></td><td><code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code> 등</td><td>✅</td></tr>
-        <tr><td>이미지</td><td><span class="badge badge-purple">이미지</span></td><td><code>&lt;img&gt;</code></td><td>✅</td></tr>
-        <tr><td>선</td><td><span class="badge badge-yellow">선</span></td><td><code>&lt;hr&gt;</code></td><td>✅</td></tr>
-        <tr><td>미지원</td><td><span class="badge badge-red">미지원</span></td><td>복잡한 인터랙티브 요소</td><td>❌</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ────────── 단축키 ────────── -->
-    <h2 id="shortcuts">단축키</h2>
-    <table>
-      <thead><tr><th>단축키</th><th>동작</th></tr></thead>
-      <tbody>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td><td>실행 취소</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>다시 실행</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>⌘</kbd>+<kbd>S</kbd></td><td>HTML 파일 저장</td></tr>
-      </tbody>
-    </table>
-
-    <div class="note">코드 뷰(Monaco 에디터)가 포커스된 상태에서는 단축키가 에디터 내부 기능으로 동작합니다. 에디터 밖을 클릭한 후 사용하세요.</div>
-
-  </main>
 </div>
+
+<script>
+const TRANSLATIONS = {
+  en: {
+    pageTitle: 'SoEZ HTML — Manual',
+    langLabel: 'Language:',
+    sbSubtitle: 'User Manual',
+    navG1: 'Getting Started',
+    navG2: 'Core Features',
+    navG3: 'Advanced',
+    navG4: 'Reference',
+    navOverview: 'Overview',
+    navQuickstart: 'Quick Start',
+    navLayout: 'Screen Layout',
+    navUpload: 'Open File',
+    navSelect: 'Select Element',
+    navEdit: 'Edit Properties',
+    navViewmode: 'View Mode',
+    navClassApply: 'Class Batch Apply',
+    navUndo: 'Undo / Redo',
+    navCapture: 'Image Capture',
+    navSave: 'Save',
+    navElements: 'Element Types',
+    navShortcuts: 'Shortcuts',
+    content: `
+      <h1>SoEZ HTML — User Manual<span class="sub">A visual HTML editing tool for non-developers</span></h1>
+      <div class="hero">
+        <p>SoEZ HTML lets you visually edit HTML files without knowing how to code. Click an element to select it, then adjust colors, sizes, and spacing in the left panel — changes are reflected in the preview instantly.</p>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <div class="cards">
+        <div class="card"><div class="card-icon">🎯</div><h4>Visual Editing</h4><p>Click any element to instantly edit its properties in the panel.</p></div>
+        <div class="card"><div class="card-icon">⚡</div><h4>Live Preview</h4><p>Changes are reflected instantly. Switch to Code view for direct HTML editing.</p></div>
+        <div class="card"><div class="card-icon">↩️</div><h4>Undo / Redo</h4><p>Up to 50 steps of history so mistakes are easy to recover.</p></div>
+        <div class="card"><div class="card-icon">📸</div><h4>Image Capture</h4><p>Auto-detect page sections and export as high-resolution images.</p></div>
+      </div>
+
+      <h2 id="quickstart">Quick Start</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Open File</strong> — Drag a <code>.html</code> file onto the upload area in the left panel, or click to browse.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Select Element</strong> — Click the element you want to edit in the preview. Its properties appear in the left panel.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Edit Properties</strong> — Adjust colors, sizes, text, etc. Changes are reflected in the preview immediately.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Save</strong> — Click the <strong>Save</strong> button (<kbd>Ctrl</kbd>+<kbd>S</kbd>) to download the modified HTML file.</div></div>
+      </div>
+
+      <h2 id="layout">Screen Layout</h2>
+      <div class="layout-diagram">
+        <div class="ld-header"><span><b>Top Toolbar</b> — File name · Undo · Redo · Reset · Save · Language · Manual</span></div>
+        <div class="ld-body">
+          <div class="ld-left"><b>Left Panel (380px)</b>File Upload<br>Element Info<br>Property Editor<br>Image Capture</div>
+          <div class="ld-main"><b>Right Panel (remaining area)</b>Preview / Code view toggle<br><br>HTML rendered preview<br>or Monaco code editor</div>
+        </div>
+        <div class="ld-status">Bottom status bar — shows DOM path of selected element (e.g. body &gt; div &gt; p)</div>
+      </div>
+      <table>
+        <thead><tr><th>Area</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Top Toolbar</strong></td><td>File name, Undo/Redo, Reset to Original, Save, Language switcher, Manual</td></tr>
+          <tr><td><strong>Left Panel</strong></td><td>File upload, selected element info, property editor, image capture</td></tr>
+          <tr><td><strong>Right Panel</strong></td><td>Preview (default) or Code view</td></tr>
+          <tr><td><strong>Status Bar</strong></td><td>DOM path of the currently selected element</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="upload">Open File</h2>
+      <p>Load a file through the upload area at the top of the left panel.</p>
+      <ul>
+        <li><strong>Drag &amp; Drop</strong> — Drag a <code>.html</code> or <code>.htm</code> file over the upload area.</li>
+        <li><strong>Click to Browse</strong> — Click the upload area or the <strong>Change File</strong> button.</li>
+        <li><strong>Paste</strong> — Copy a file to clipboard, then paste.</li>
+      </ul>
+      <div class="warn">Maximum file size is <strong>10MB</strong>. Loading a new file while one is already open will reset all edits.</div>
+
+      <h2 id="select">Select Element</h2>
+      <p>Click the element you want to edit in the preview. The selected element is highlighted and its details appear in the left panel.</p>
+      <h3>Element Info Panel</h3>
+      <div class="prop-group">
+        <div class="prop-group-header">Displayed Info</div>
+        <div class="prop-row"><div class="prop-name">Tag</div><div class="prop-desc">HTML tag of the selected element (e.g. <code>&lt;div&gt;</code>)</div></div>
+        <div class="prop-row"><div class="prop-name">Type Badge</div><div class="prop-desc">One of: Text · Button · Box · Image · Line · N/A</div></div>
+        <div class="prop-row"><div class="prop-name">ID</div><div class="prop-desc">The element's <code>id</code> attribute (shown in yellow)</div></div>
+        <div class="prop-row"><div class="prop-name">Classes</div><div class="prop-desc">Applied CSS classes (shown in blue)</div></div>
+      </div>
+      <h3>Navigation Buttons</h3>
+      <ul>
+        <li><strong>▲ Up arrow</strong> — Move selection to parent element</li>
+        <li><strong>▼ Down arrow</strong> — Move selection to first child element</li>
+      </ul>
+
+      <h2 id="edit">Edit Properties</h2>
+      <p>Editable properties differ depending on the type of the selected element.</p>
+
+      <h3>Text elements (<code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1&gt;</code>, etc.)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">Text Content</div><div class="prop-desc">Edit text directly</div></div>
+        <div class="prop-row"><div class="prop-name">Font Size</div><div class="prop-desc">8 – 120px slider</div></div>
+        <div class="prop-row"><div class="prop-name">Font</div><div class="prop-desc">Font family dropdown</div></div>
+        <div class="prop-row"><div class="prop-name">Weight</div><div class="prop-desc">100 – 900 (Thin – Black)</div></div>
+        <div class="prop-row"><div class="prop-name">Italic</div><div class="prop-desc">Toggle italic style</div></div>
+        <div class="prop-row"><div class="prop-name">Color</div><div class="prop-desc">Color picker</div></div>
+        <div class="prop-row"><div class="prop-name">Alignment</div><div class="prop-desc">Left / Center / Right / Justify</div></div>
+        <div class="prop-row"><div class="prop-name">Line Height</div><div class="prop-desc">0.5 – 3x slider</div></div>
+        <div class="prop-row"><div class="prop-name">Letter Spacing</div><div class="prop-desc">-5 – 20px slider</div></div>
+      </div>
+
+      <h3>Button elements (<code>&lt;button&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">Text Content</div><div class="prop-desc">Edit button label</div></div>
+        <div class="prop-row"><div class="prop-name">Background / Text Color</div><div class="prop-desc">Color pickers</div></div>
+        <div class="prop-row"><div class="prop-name">Border Radius</div><div class="prop-desc">0 – 100px</div></div>
+        <div class="prop-row"><div class="prop-name">Border</div><div class="prop-desc">Width · Style · Color</div></div>
+        <div class="prop-row"><div class="prop-name">Padding</div><div class="prop-desc">Top/Right/Bottom/Left individually</div></div>
+        <div class="prop-row"><div class="prop-name">Font Size</div><div class="prop-desc">8 – 72px</div></div>
+      </div>
+
+      <h3>Box elements (<code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, etc.)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">Background Color</div><div class="prop-desc">Color picker</div></div>
+        <div class="prop-row"><div class="prop-name">Background Image</div><div class="prop-desc">Enter image URL directly</div></div>
+        <div class="prop-row"><div class="prop-name">Border</div><div class="prop-desc">Width · Style · Color</div></div>
+        <div class="prop-row"><div class="prop-name">Border Radius</div><div class="prop-desc">0 – 100px</div></div>
+        <div class="prop-row"><div class="prop-name">Padding</div><div class="prop-desc">Top/Right/Bottom/Left</div></div>
+        <div class="prop-row"><div class="prop-name">Margin</div><div class="prop-desc">Top/Right/Bottom/Left</div></div>
+        <div class="prop-row"><div class="prop-name">Shadow</div><div class="prop-desc">X · Y offset, Blur, Spread, Color</div></div>
+      </div>
+
+      <h3>Image elements (<code>&lt;img&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">Image File</div><div class="prop-desc">Replace via file picker (inserted as Data URI)</div></div>
+        <div class="prop-row"><div class="prop-name">Width / Height</div><div class="prop-desc">0 – 2000px (with aspect ratio lock toggle)</div></div>
+        <div class="prop-row"><div class="prop-name">Border Radius</div><div class="prop-desc">0 – 100px</div></div>
+        <div class="prop-row"><div class="prop-name">Opacity</div><div class="prop-desc">0 – 1</div></div>
+        <div class="prop-row"><div class="prop-name">Object Fit</div><div class="prop-desc">cover / contain / fill / none / scale-down</div></div>
+      </div>
+
+      <h3>Line elements (<code>&lt;hr&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">Line Color</div><div class="prop-desc">Color picker</div></div>
+        <div class="prop-row"><div class="prop-name">Thickness</div><div class="prop-desc">0 – 20px</div></div>
+        <div class="prop-row"><div class="prop-name">Style</div><div class="prop-desc">solid / dashed / dotted</div></div>
+        <div class="prop-row"><div class="prop-name">Width</div><div class="prop-desc">0 – 100%</div></div>
+      </div>
+
+      <h2 id="viewmode">View Mode</h2>
+      <p>Switch views using the <strong>Preview / Code</strong> buttons at the top of the right panel.</p>
+      <table>
+        <thead><tr><th>Mode</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Preview</strong></td><td>The actual rendered HTML. Click elements to select and edit. Slide decks and interactive elements also work.</td></tr>
+          <tr><td><strong>Code</strong></td><td>Monaco code editor (VS Code-style). HTML syntax highlighting and auto-complete. Auto-syncs when switching back to Preview.</td></tr>
+        </tbody>
+      </table>
+      <div class="note">Selecting an element in Preview then switching to Code view automatically scrolls to and highlights the corresponding line.</div>
+
+      <h2 id="class-apply">Class Batch Apply</h2>
+      <p>Apply property changes to all elements sharing the same CSS class at once.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Select an element that has a class.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Enable the <strong>"Apply to all same-class elements"</strong> checkbox in the left panel.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Choose the class to edit from the dropdown.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">Change any property — it applies to <strong>all elements</strong> with that class simultaneously.</div></div>
+      </div>
+
+      <h2 id="undo">Undo / Redo</h2>
+      <p>Navigate edit history via the toolbar or keyboard shortcuts. Up to <strong>50 steps</strong> are retained.</p>
+      <table>
+        <thead><tr><th>Button</th><th>Shortcut</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Undo</strong></td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Revert the last change.</td></tr>
+          <tr><td><strong>Redo</strong></td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Re-apply a reverted change.</td></tr>
+          <tr><td><strong>Reset</strong></td><td>—</td><td>Fully revert to the state when the file was first opened.</td></tr>
+        </tbody>
+      </table>
+      <div class="note">When undoing/redoing on a slide-deck HTML, the view automatically navigates to the slide that was edited.</div>
+
+      <h2 id="capture">Image Capture</h2>
+      <p>Split the page into sections and export as high-resolution images. Use the <strong>Capture</strong> area at the bottom of the left panel.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Choose <strong>Format</strong> (JPG / PNG) and <strong>Resolution</strong> (1x / 2x / 3x).</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Click <strong>Detect Sections</strong>. Page sections are detected automatically.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Review the detected section list and heights. Click <strong>Reset</strong> and re-detect if needed.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">Click <strong>Capture</strong>. A progress bar appears and a ZIP file downloads when complete.</div></div>
+      </div>
+      <div class="warn">Capture only works in <strong>Preview mode</strong>. Switch from Code view first.</div>
+
+      <h2 id="save">Save</h2>
+      <p>Click the <strong>Save</strong> button or press <kbd>Ctrl</kbd>+<kbd>S</kbd> to download the modified HTML file to your computer.</p>
+      <div class="warn"><strong>There is no auto-save.</strong> Save manually after important changes. Unsaved changes are lost if the browser tab is closed.</div>
+
+      <h2 id="elements">Element Types Reference</h2>
+      <table>
+        <thead><tr><th>Type</th><th>Badge</th><th>Tags</th><th>Editable</th></tr></thead>
+        <tbody>
+          <tr><td>Text</td><td><span class="badge badge-blue">Text</span></td><td><code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1–6&gt;</code>, <code>&lt;li&gt;</code>, etc.</td><td>✅</td></tr>
+          <tr><td>Button</td><td><span class="badge badge-green">Button</span></td><td><code>&lt;button&gt;</code>, <code>&lt;a&gt;</code></td><td>✅</td></tr>
+          <tr><td>Box</td><td><span class="badge badge-gray">Box</span></td><td><code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code>, etc.</td><td>✅</td></tr>
+          <tr><td>Image</td><td><span class="badge badge-purple">Image</span></td><td><code>&lt;img&gt;</code></td><td>✅</td></tr>
+          <tr><td>Line</td><td><span class="badge badge-yellow">Line</span></td><td><code>&lt;hr&gt;</code></td><td>✅</td></tr>
+          <tr><td>N/A</td><td><span class="badge badge-red">N/A</span></td><td>Complex interactive elements</td><td>❌</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="shortcuts">Keyboard Shortcuts</h2>
+      <table>
+        <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>⌘</kbd>+<kbd>S</kbd></td><td>Save HTML file</td></tr>
+        </tbody>
+      </table>
+      <div class="note">When the Code view (Monaco editor) is focused, shortcuts act as editor-internal commands. Click outside the editor first.</div>
+    `
+  },
+
+  ko: {
+    pageTitle: 'SoEZ HTML — 사용 설명서',
+    langLabel: '언어:',
+    sbSubtitle: '사용 설명서',
+    navG1: '시작하기',
+    navG2: '핵심 기능',
+    navG3: '고급 기능',
+    navG4: '참고',
+    navOverview: '개요',
+    navQuickstart: '빠른 시작',
+    navLayout: '화면 구성',
+    navUpload: '파일 열기',
+    navSelect: '요소 선택',
+    navEdit: '속성 편집',
+    navViewmode: '뷰 모드',
+    navClassApply: '클래스 일괄 적용',
+    navUndo: '실행 취소/다시 실행',
+    navCapture: '이미지 캡쳐',
+    navSave: '저장',
+    navElements: '요소 유형',
+    navShortcuts: '단축키',
+    content: `
+      <h1>SoEZ HTML 사용 설명서<span class="sub">비개발자를 위한 시각적 HTML 편집 도구</span></h1>
+      <div class="hero">
+        <p>SoEZ HTML은 코드를 몰라도 HTML 파일을 시각적으로 수정할 수 있는 도구입니다. 요소를 클릭하여 선택하고, 왼쪽 패널에서 색상·크기·여백 등을 조정하면 즉시 미리보기에 반영됩니다.</p>
+      </div>
+
+      <h2 id="overview">개요</h2>
+      <div class="cards">
+        <div class="card"><div class="card-icon">🎯</div><h4>시각적 편집</h4><p>요소를 클릭하면 해당 속성을 패널에서 즉시 편집할 수 있습니다.</p></div>
+        <div class="card"><div class="card-icon">⚡</div><h4>실시간 미리보기</h4><p>변경 사항이 바로 미리보기에 반영됩니다. 코드 뷰로 전환하여 직접 수정도 가능합니다.</p></div>
+        <div class="card"><div class="card-icon">↩️</div><h4>실행 취소/다시 실행</h4><p>최대 50단계 이력 관리로 실수를 쉽게 되돌릴 수 있습니다.</p></div>
+        <div class="card"><div class="card-icon">📸</div><h4>이미지 캡쳐</h4><p>페이지 섹션을 자동 감지하여 고해상도 이미지로 내보낼 수 있습니다.</p></div>
+      </div>
+
+      <h2 id="quickstart">빠른 시작</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>파일 열기</strong> — 왼쪽 패널의 업로드 영역에 <code>.html</code> 파일을 드래그하거나 클릭하여 선택합니다.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>요소 선택</strong> — 미리보기에서 편집할 요소를 클릭합니다. 왼쪽 패널에 해당 속성이 표시됩니다.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>속성 편집</strong> — 색상, 크기, 텍스트 등 원하는 속성을 조정합니다. 변경 사항이 즉시 미리보기에 반영됩니다.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>저장</strong> — 상단 <strong>저장</strong> 버튼(<kbd>Ctrl</kbd>+<kbd>S</kbd>)을 클릭하여 수정된 HTML 파일을 다운로드합니다.</div></div>
+      </div>
+
+      <h2 id="layout">화면 구성</h2>
+      <div class="layout-diagram">
+        <div class="ld-header"><span><b>상단 툴바</b> — 파일명 · 실행 취소 · 다시 실행 · 원본 복원 · 저장 · 언어 · 매뉴얼</span></div>
+        <div class="ld-body">
+          <div class="ld-left"><b>왼쪽 패널 (380px)</b>파일 업로드<br>요소 정보<br>속성 편집<br>이미지 캡쳐</div>
+          <div class="ld-main"><b>오른쪽 패널 (나머지 영역)</b>프리뷰 / 코드 뷰 전환<br><br>HTML 렌더링 미리보기<br>또는 Monaco 코드 에디터</div>
+        </div>
+        <div class="ld-status">하단 상태바 — 선택된 요소의 부모 경로 표시 (예: body &gt; div &gt; p)</div>
+      </div>
+      <table>
+        <thead><tr><th>영역</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><strong>상단 툴바</strong></td><td>파일명 표시, 실행 취소/다시 실행, 원본 복원, 저장, 언어 전환, 매뉴얼</td></tr>
+          <tr><td><strong>왼쪽 패널</strong></td><td>파일 업로드, 선택된 요소 정보, 속성 편집기, 이미지 캡쳐</td></tr>
+          <tr><td><strong>오른쪽 패널</strong></td><td>프리뷰(기본) 또는 코드 뷰 전환 가능</td></tr>
+          <tr><td><strong>하단 상태바</strong></td><td>현재 선택된 요소의 DOM 경로 표시</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="upload">파일 열기</h2>
+      <p>왼쪽 패널 상단의 업로드 영역을 통해 파일을 불러옵니다.</p>
+      <ul>
+        <li><strong>드래그 앤 드롭</strong> — <code>.html</code>, <code>.htm</code> 파일을 영역 위로 드래그합니다.</li>
+        <li><strong>클릭하여 찾아보기</strong> — 업로드 영역 또는 <strong>파일 변경</strong> 버튼을 클릭합니다.</li>
+        <li><strong>붙여넣기</strong> — 파일을 클립보드에 복사한 뒤 붙여넣습니다.</li>
+      </ul>
+      <div class="warn">파일 크기는 최대 <strong>10MB</strong>입니다. 이미 파일이 열려 있을 때 새 파일을 불러오면 기존 편집 내용이 초기화됩니다.</div>
+
+      <h2 id="select">요소 선택</h2>
+      <p>미리보기에서 편집할 요소를 클릭합니다. 선택된 요소는 강조 표시되며 왼쪽 패널에 상세 정보가 나타납니다.</p>
+      <h3>요소 정보 패널</h3>
+      <div class="prop-group">
+        <div class="prop-group-header">표시 항목</div>
+        <div class="prop-row"><div class="prop-name">태그</div><div class="prop-desc">선택된 요소의 HTML 태그 (예: <code>&lt;div&gt;</code>)</div></div>
+        <div class="prop-row"><div class="prop-name">유형 뱃지</div><div class="prop-desc">텍스트 · 버튼 · 박스 · 이미지 · 선 · 미지원 중 하나</div></div>
+        <div class="prop-row"><div class="prop-name">ID</div><div class="prop-desc">요소의 <code>id</code> 속성 (노란색으로 표시)</div></div>
+        <div class="prop-row"><div class="prop-name">클래스</div><div class="prop-desc">적용된 CSS 클래스 목록 (파란색으로 표시)</div></div>
+      </div>
+      <h3>요소 탐색 버튼</h3>
+      <ul>
+        <li><strong>▲ 위쪽 화살표</strong> — 부모 요소로 선택 이동</li>
+        <li><strong>▼ 아래쪽 화살표</strong> — 첫 번째 자식 요소로 선택 이동</li>
+      </ul>
+
+      <h2 id="edit">속성 편집</h2>
+      <p>선택된 요소의 유형에 따라 편집 가능한 속성이 다르게 표시됩니다.</p>
+
+      <h3>텍스트 요소 (<code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1&gt;</code> 등)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">텍스트 내용</div><div class="prop-desc">직접 텍스트를 입력하여 수정</div></div>
+        <div class="prop-row"><div class="prop-name">글자 크기</div><div class="prop-desc">8 ~ 120px 슬라이더</div></div>
+        <div class="prop-row"><div class="prop-name">폰트</div><div class="prop-desc">폰트 패밀리 드롭다운 선택</div></div>
+        <div class="prop-row"><div class="prop-name">굵기</div><div class="prop-desc">100 ~ 900 (Thin ~ Black)</div></div>
+        <div class="prop-row"><div class="prop-name">이탤릭</div><div class="prop-desc">기울임 토글 버튼</div></div>
+        <div class="prop-row"><div class="prop-name">글자 색</div><div class="prop-desc">컬러 피커</div></div>
+        <div class="prop-row"><div class="prop-name">정렬</div><div class="prop-desc">왼쪽 / 가운데 / 오른쪽 / 양쪽</div></div>
+        <div class="prop-row"><div class="prop-name">줄 높이</div><div class="prop-desc">0.5 ~ 3x 슬라이더</div></div>
+        <div class="prop-row"><div class="prop-name">자간</div><div class="prop-desc">-5 ~ 20px 슬라이더</div></div>
+      </div>
+
+      <h3>버튼 요소 (<code>&lt;button&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">텍스트 내용</div><div class="prop-desc">버튼 레이블 수정</div></div>
+        <div class="prop-row"><div class="prop-name">배경색 / 글자 색</div><div class="prop-desc">각각 컬러 피커</div></div>
+        <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px (테두리 반경)</div></div>
+        <div class="prop-row"><div class="prop-name">테두리</div><div class="prop-desc">두께 · 스타일 · 색상</div></div>
+        <div class="prop-row"><div class="prop-name">안쪽 여백</div><div class="prop-desc">상/우/하/좌 패딩 개별 조정</div></div>
+        <div class="prop-row"><div class="prop-name">글자 크기</div><div class="prop-desc">8 ~ 72px</div></div>
+      </div>
+
+      <h3>박스 요소 (<code>&lt;div&gt;</code>, <code>&lt;section&gt;</code> 등)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">배경색</div><div class="prop-desc">컬러 피커</div></div>
+        <div class="prop-row"><div class="prop-name">배경 이미지</div><div class="prop-desc">이미지 URL 직접 입력</div></div>
+        <div class="prop-row"><div class="prop-name">테두리</div><div class="prop-desc">두께 · 스타일 · 색상</div></div>
+        <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px</div></div>
+        <div class="prop-row"><div class="prop-name">안쪽 여백</div><div class="prop-desc">상/우/하/좌 패딩</div></div>
+        <div class="prop-row"><div class="prop-name">바깥 여백</div><div class="prop-desc">상/우/하/좌 마진</div></div>
+        <div class="prop-row"><div class="prop-name">그림자</div><div class="prop-desc">X · Y 오프셋, 흐림, 확산, 색상</div></div>
+      </div>
+
+      <h3>이미지 요소 (<code>&lt;img&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">이미지 파일</div><div class="prop-desc">파일 선택 버튼으로 교체 (데이터 URI로 삽입)</div></div>
+        <div class="prop-row"><div class="prop-name">너비 / 높이</div><div class="prop-desc">0 ~ 2000px (비율 고정 토글 있음)</div></div>
+        <div class="prop-row"><div class="prop-name">둥글기</div><div class="prop-desc">0 ~ 100px</div></div>
+        <div class="prop-row"><div class="prop-name">투명도</div><div class="prop-desc">0 ~ 1</div></div>
+        <div class="prop-row"><div class="prop-name">맞춤</div><div class="prop-desc">cover / contain / fill / none / scale-down</div></div>
+      </div>
+
+      <h3>선 요소 (<code>&lt;hr&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">선 색상</div><div class="prop-desc">컬러 피커</div></div>
+        <div class="prop-row"><div class="prop-name">선 두께</div><div class="prop-desc">0 ~ 20px</div></div>
+        <div class="prop-row"><div class="prop-name">선 스타일</div><div class="prop-desc">실선 / 파선 / 점선</div></div>
+        <div class="prop-row"><div class="prop-name">너비</div><div class="prop-desc">0 ~ 100%</div></div>
+      </div>
+
+      <h2 id="viewmode">뷰 모드 전환</h2>
+      <p>오른쪽 패널 상단의 <strong>프리뷰 / 코드</strong> 버튼으로 뷰를 전환합니다.</p>
+      <table>
+        <thead><tr><th>모드</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><strong>프리뷰</strong></td><td>HTML이 렌더링된 실제 화면. 요소를 클릭하여 선택 및 편집. 슬라이드덱·인터랙티브 요소도 동작.</td></tr>
+          <tr><td><strong>코드</strong></td><td>Monaco 코드 에디터(VS Code 방식). HTML 구문 강조, 자동 완성. 코드 수정 후 프리뷰로 전환 시 자동 동기화.</td></tr>
+        </tbody>
+      </table>
+      <div class="note">프리뷰에서 요소를 선택한 뒤 코드 뷰로 전환하면 해당 요소가 있는 코드 라인으로 자동 스크롤되고 하이라이트됩니다.</div>
+
+      <h2 id="class-apply">클래스 일괄 적용</h2>
+      <p>같은 클래스를 가진 모든 요소에 속성 변경을 한 번에 적용하는 기능입니다.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">클래스가 있는 요소를 선택합니다.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">왼쪽 패널의 <strong>"같은 클래스에 모두 적용"</strong> 체크박스를 활성화합니다.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">드롭다운에서 편집할 클래스를 선택합니다.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">속성을 변경하면 해당 클래스를 가진 <strong>모든 요소</strong>에 동시 적용됩니다.</div></div>
+      </div>
+
+      <h2 id="undo">실행 취소 / 다시 실행</h2>
+      <p>상단 툴바 또는 단축키로 변경 이력을 탐색합니다. 최대 <strong>50단계</strong>까지 이력이 유지됩니다.</p>
+      <table>
+        <thead><tr><th>버튼</th><th>단축키</th><th>동작</th></tr></thead>
+        <tbody>
+          <tr><td><strong>실행 취소</strong></td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>직전 변경을 되돌립니다.</td></tr>
+          <tr><td><strong>다시 실행</strong></td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> 또는 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>취소한 변경을 다시 적용합니다.</td></tr>
+          <tr><td><strong>원본 복원</strong></td><td>—</td><td>파일을 처음 열었을 때 상태로 완전히 되돌립니다.</td></tr>
+        </tbody>
+      </table>
+      <div class="note">슬라이드덱 HTML에서 실행 취소/다시 실행 시, 변경했던 슬라이드 페이지로 자동 이동합니다.</div>
+
+      <h2 id="capture">이미지 캡쳐</h2>
+      <p>페이지를 섹션별로 나눠 고해상도 이미지로 내보냅니다. 왼쪽 패널 하단 <strong>캡쳐</strong> 영역에서 사용합니다.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>형식</strong>(JPG / PNG)과 <strong>해상도</strong>(1x / 2x / 3x)를 선택합니다.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>섹션 감지</strong> 버튼을 클릭합니다. 페이지의 구분 섹션이 자동으로 감지됩니다.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">감지된 섹션 목록과 높이를 확인합니다. 원하지 않을 경우 <strong>초기화</strong> 후 다시 감지합니다.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>캡쳐</strong> 버튼을 클릭합니다. 진행바가 표시되고 완료되면 ZIP 파일이 다운로드됩니다.</div></div>
+      </div>
+      <div class="warn">캡쳐는 <strong>프리뷰 모드</strong>에서만 작동합니다. 코드 뷰에서는 먼저 프리뷰로 전환하세요.</div>
+
+      <h2 id="save">저장</h2>
+      <p>상단 <strong>저장</strong> 버튼 또는 <kbd>Ctrl</kbd>+<kbd>S</kbd>를 누르면 수정된 HTML 파일이 컴퓨터에 다운로드됩니다.</p>
+      <div class="warn"><strong>자동 저장은 없습니다.</strong> 중요한 변경 후에는 수동으로 저장하세요. 브라우저를 닫으면 저장하지 않은 변경 사항이 사라집니다.</div>
+
+      <h2 id="elements">요소 유형 참고</h2>
+      <table>
+        <thead><tr><th>유형</th><th>뱃지</th><th>해당 태그</th><th>편집 가능</th></tr></thead>
+        <tbody>
+          <tr><td>텍스트</td><td><span class="badge badge-blue">텍스트</span></td><td><code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1~6&gt;</code>, <code>&lt;li&gt;</code> 등</td><td>✅</td></tr>
+          <tr><td>버튼</td><td><span class="badge badge-green">버튼</span></td><td><code>&lt;button&gt;</code>, <code>&lt;a&gt;</code></td><td>✅</td></tr>
+          <tr><td>박스</td><td><span class="badge badge-gray">박스</span></td><td><code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code> 등</td><td>✅</td></tr>
+          <tr><td>이미지</td><td><span class="badge badge-purple">이미지</span></td><td><code>&lt;img&gt;</code></td><td>✅</td></tr>
+          <tr><td>선</td><td><span class="badge badge-yellow">선</span></td><td><code>&lt;hr&gt;</code></td><td>✅</td></tr>
+          <tr><td>미지원</td><td><span class="badge badge-red">미지원</span></td><td>복잡한 인터랙티브 요소</td><td>❌</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="shortcuts">단축키</h2>
+      <table>
+        <thead><tr><th>단축키</th><th>동작</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td><td>실행 취소</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>다시 실행</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>⌘</kbd>+<kbd>S</kbd></td><td>HTML 파일 저장</td></tr>
+        </tbody>
+      </table>
+      <div class="note">코드 뷰(Monaco 에디터)가 포커스된 상태에서는 단축키가 에디터 내부 기능으로 동작합니다. 에디터 밖을 클릭한 후 사용하세요.</div>
+    `
+  },
+
+  ja: {
+    pageTitle: 'SoEZ HTML — マニュアル',
+    langLabel: '言語:',
+    sbSubtitle: 'ユーザーマニュアル',
+    navG1: 'はじめに',
+    navG2: '主な機能',
+    navG3: '高度な機能',
+    navG4: '参考',
+    navOverview: '概要',
+    navQuickstart: 'クイックスタート',
+    navLayout: '画面構成',
+    navUpload: 'ファイルを開く',
+    navSelect: '要素の選択',
+    navEdit: 'プロパティの編集',
+    navViewmode: 'ビューモード',
+    navClassApply: 'クラス一括適用',
+    navUndo: '元に戻す／やり直し',
+    navCapture: '画像キャプチャ',
+    navSave: '保存',
+    navElements: '要素の種類',
+    navShortcuts: 'キーボードショートカット',
+    content: `
+      <h1>SoEZ HTML ユーザーマニュアル<span class="sub">非開発者向けのビジュアルHTML編集ツール</span></h1>
+      <div class="hero">
+        <p>SoEZ HTMLは、コードを知らなくてもHTMLファイルを視覚的に編集できるツールです。要素をクリックして選択し、左パネルで色・サイズ・余白などを調整すると、プレビューにすぐ反映されます。</p>
+      </div>
+
+      <h2 id="overview">概要</h2>
+      <div class="cards">
+        <div class="card"><div class="card-icon">🎯</div><h4>ビジュアル編集</h4><p>要素をクリックすると、そのプロパティをパネルですぐに編集できます。</p></div>
+        <div class="card"><div class="card-icon">⚡</div><h4>リアルタイムプレビュー</h4><p>変更がすぐにプレビューに反映されます。コードビューに切り替えて直接編集も可能です。</p></div>
+        <div class="card"><div class="card-icon">↩️</div><h4>元に戻す／やり直し</h4><p>最大50ステップの履歴管理でミスを簡単に取り消せます。</p></div>
+        <div class="card"><div class="card-icon">📸</div><h4>画像キャプチャ</h4><p>ページのセクションを自動検出し、高解像度の画像として書き出せます。</p></div>
+      </div>
+
+      <h2 id="quickstart">クイックスタート</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>ファイルを開く</strong> — 左パネルのアップロードエリアに <code>.html</code> ファイルをドラッグするか、クリックして選択します。</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>要素を選択</strong> — プレビューで編集したい要素をクリックします。左パネルにプロパティが表示されます。</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>プロパティを編集</strong> — 色、サイズ、テキストなど任意のプロパティを調整します。変更はすぐにプレビューに反映されます。</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>保存</strong> — 上部の<strong>保存</strong>ボタン（<kbd>Ctrl</kbd>+<kbd>S</kbd>）をクリックして編集済みHTMLファイルをダウンロードします。</div></div>
+      </div>
+
+      <h2 id="layout">画面構成</h2>
+      <div class="layout-diagram">
+        <div class="ld-header"><span><b>上部ツールバー</b> — ファイル名 · 元に戻す · やり直し · 元のファイルに戻す · 保存 · 言語 · マニュアル</span></div>
+        <div class="ld-body">
+          <div class="ld-left"><b>左パネル (380px)</b>ファイルアップロード<br>要素情報<br>プロパティ編集<br>画像キャプチャ</div>
+          <div class="ld-main"><b>右パネル (残りのエリア)</b>プレビュー / コードビュー切り替え<br><br>HTMLレンダリングプレビュー<br>またはMonacoコードエディター</div>
+        </div>
+        <div class="ld-status">下部ステータスバー — 選択中の要素のDOMパスを表示（例: body &gt; div &gt; p）</div>
+      </div>
+      <table>
+        <thead><tr><th>エリア</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td><strong>上部ツールバー</strong></td><td>ファイル名表示、元に戻す／やり直し、元のファイルに戻す、保存、言語切り替え、マニュアル</td></tr>
+          <tr><td><strong>左パネル</strong></td><td>ファイルアップロード、選択要素情報、プロパティエディター、画像キャプチャ</td></tr>
+          <tr><td><strong>右パネル</strong></td><td>プレビュー（デフォルト）またはコードビューに切り替え可能</td></tr>
+          <tr><td><strong>ステータスバー</strong></td><td>現在選択中の要素のDOMパスを表示</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="upload">ファイルを開く</h2>
+      <p>左パネル上部のアップロードエリアからファイルを読み込みます。</p>
+      <ul>
+        <li><strong>ドラッグ＆ドロップ</strong> — <code>.html</code>、<code>.htm</code> ファイルをエリア上にドラッグします。</li>
+        <li><strong>クリックして参照</strong> — アップロードエリアまたは<strong>ファイルを変更</strong>ボタンをクリックします。</li>
+        <li><strong>貼り付け</strong> — ファイルをクリップボードにコピーして貼り付けます。</li>
+      </ul>
+      <div class="warn">ファイルサイズの上限は <strong>10MB</strong> です。ファイルが開いている状態で新しいファイルを読み込むと、既存の編集内容がリセットされます。</div>
+
+      <h2 id="select">要素の選択</h2>
+      <p>プレビューで編集したい要素をクリックします。選択された要素がハイライト表示され、左パネルに詳細情報が表示されます。</p>
+      <h3>要素情報パネル</h3>
+      <div class="prop-group">
+        <div class="prop-group-header">表示項目</div>
+        <div class="prop-row"><div class="prop-name">タグ</div><div class="prop-desc">選択した要素のHTMLタグ（例: <code>&lt;div&gt;</code>）</div></div>
+        <div class="prop-row"><div class="prop-name">種類バッジ</div><div class="prop-desc">テキスト · ボタン · ボックス · 画像 · 区切り線 · 非対応 のいずれか</div></div>
+        <div class="prop-row"><div class="prop-name">ID</div><div class="prop-desc">要素の <code>id</code> 属性（黄色で表示）</div></div>
+        <div class="prop-row"><div class="prop-name">クラス</div><div class="prop-desc">適用されているCSSクラスの一覧（青色で表示）</div></div>
+      </div>
+      <h3>要素ナビゲーションボタン</h3>
+      <ul>
+        <li><strong>▲ 上矢印</strong> — 親要素に選択を移動</li>
+        <li><strong>▼ 下矢印</strong> — 最初の子要素に選択を移動</li>
+      </ul>
+
+      <h2 id="edit">プロパティの編集</h2>
+      <p>選択した要素の種類によって、編集可能なプロパティが異なります。</p>
+
+      <h3>テキスト要素 (<code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1&gt;</code> など)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">テキスト内容</div><div class="prop-desc">テキストを直接入力して編集</div></div>
+        <div class="prop-row"><div class="prop-name">フォントサイズ</div><div class="prop-desc">8〜120px スライダー</div></div>
+        <div class="prop-row"><div class="prop-name">フォント</div><div class="prop-desc">フォントファミリーのドロップダウン選択</div></div>
+        <div class="prop-row"><div class="prop-name">太さ</div><div class="prop-desc">100〜900（Thin〜Black）</div></div>
+        <div class="prop-row"><div class="prop-name">斜体</div><div class="prop-desc">イタリック体のトグルボタン</div></div>
+        <div class="prop-row"><div class="prop-name">文字色</div><div class="prop-desc">カラーピッカー</div></div>
+        <div class="prop-row"><div class="prop-name">揃え</div><div class="prop-desc">左 / 中央 / 右 / 両端揃え</div></div>
+        <div class="prop-row"><div class="prop-name">行の高さ</div><div class="prop-desc">0.5〜3x スライダー</div></div>
+        <div class="prop-row"><div class="prop-name">字間</div><div class="prop-desc">-5〜20px スライダー</div></div>
+      </div>
+
+      <h3>ボタン要素 (<code>&lt;button&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">テキスト内容</div><div class="prop-desc">ボタンラベルを編集</div></div>
+        <div class="prop-row"><div class="prop-name">背景色 / 文字色</div><div class="prop-desc">各カラーピッカー</div></div>
+        <div class="prop-row"><div class="prop-name">角丸</div><div class="prop-desc">0〜100px（border-radius）</div></div>
+        <div class="prop-row"><div class="prop-name">ボーダー</div><div class="prop-desc">太さ · スタイル · 色</div></div>
+        <div class="prop-row"><div class="prop-name">内側の余白</div><div class="prop-desc">上/右/下/左のパディングを個別調整</div></div>
+        <div class="prop-row"><div class="prop-name">フォントサイズ</div><div class="prop-desc">8〜72px</div></div>
+      </div>
+
+      <h3>ボックス要素 (<code>&lt;div&gt;</code>, <code>&lt;section&gt;</code> など)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">背景色</div><div class="prop-desc">カラーピッカー</div></div>
+        <div class="prop-row"><div class="prop-name">背景画像</div><div class="prop-desc">画像URLを直接入力</div></div>
+        <div class="prop-row"><div class="prop-name">ボーダー</div><div class="prop-desc">太さ · スタイル · 色</div></div>
+        <div class="prop-row"><div class="prop-name">角丸</div><div class="prop-desc">0〜100px</div></div>
+        <div class="prop-row"><div class="prop-name">内側の余白</div><div class="prop-desc">上/右/下/左のパディング</div></div>
+        <div class="prop-row"><div class="prop-name">外側の余白</div><div class="prop-desc">上/右/下/左のマージン</div></div>
+        <div class="prop-row"><div class="prop-name">影</div><div class="prop-desc">X · Y オフセット、ぼかし、広がり、色</div></div>
+      </div>
+
+      <h3>画像要素 (<code>&lt;img&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">画像ファイル</div><div class="prop-desc">ファイル選択ボタンで置換（データURIとして挿入）</div></div>
+        <div class="prop-row"><div class="prop-name">幅 / 高さ</div><div class="prop-desc">0〜2000px（アスペクト比固定トグルあり）</div></div>
+        <div class="prop-row"><div class="prop-name">角丸</div><div class="prop-desc">0〜100px</div></div>
+        <div class="prop-row"><div class="prop-name">不透明度</div><div class="prop-desc">0〜1</div></div>
+        <div class="prop-row"><div class="prop-name">フィット</div><div class="prop-desc">cover / contain / fill / none / scale-down</div></div>
+      </div>
+
+      <h3>区切り線要素 (<code>&lt;hr&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">線の色</div><div class="prop-desc">カラーピッカー</div></div>
+        <div class="prop-row"><div class="prop-name">線の太さ</div><div class="prop-desc">0〜20px</div></div>
+        <div class="prop-row"><div class="prop-name">線のスタイル</div><div class="prop-desc">実線 / 破線 / 点線</div></div>
+        <div class="prop-row"><div class="prop-name">幅</div><div class="prop-desc">0〜100%</div></div>
+      </div>
+
+      <h2 id="viewmode">ビューモードの切り替え</h2>
+      <p>右パネル上部の<strong>プレビュー / コード</strong>ボタンでビューを切り替えます。</p>
+      <table>
+        <thead><tr><th>モード</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td><strong>プレビュー</strong></td><td>実際にレンダリングされたHTML画面。要素をクリックして選択・編集。スライドデッキやインタラクティブ要素も動作します。</td></tr>
+          <tr><td><strong>コード</strong></td><td>Monacoコードエディター（VS Code方式）。HTMLシンタックスハイライト・自動補完。コード編集後にプレビューへ切り替えると自動同期されます。</td></tr>
+        </tbody>
+      </table>
+      <div class="note">プレビューで要素を選択してからコードビューに切り替えると、その要素が含まれるコード行に自動スクロールしてハイライト表示されます。</div>
+
+      <h2 id="class-apply">クラス一括適用</h2>
+      <p>同じCSSクラスを持つすべての要素にプロパティの変更を一度に適用する機能です。</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">クラスを持つ要素を選択します。</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">左パネルの<strong>「同じクラスのすべての要素に適用」</strong>チェックボックスを有効にします。</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">ドロップダウンから編集するクラスを選択します。</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">プロパティを変更すると、そのクラスを持つ<strong>すべての要素</strong>に同時に適用されます。</div></div>
+      </div>
+
+      <h2 id="undo">元に戻す / やり直し</h2>
+      <p>上部ツールバーまたはキーボードショートカットで変更履歴を操作します。最大 <strong>50ステップ</strong> の履歴が保持されます。</p>
+      <table>
+        <thead><tr><th>ボタン</th><th>ショートカット</th><th>動作</th></tr></thead>
+        <tbody>
+          <tr><td><strong>元に戻す</strong></td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>直前の変更を取り消します。</td></tr>
+          <tr><td><strong>やり直し</strong></td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> または <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>取り消した変更を再適用します。</td></tr>
+          <tr><td><strong>元のファイルに戻す</strong></td><td>—</td><td>ファイルを最初に開いた時の状態に完全に戻します。</td></tr>
+        </tbody>
+      </table>
+      <div class="note">スライドデッキHTMLで元に戻す／やり直しを実行すると、編集したスライドページに自動的に移動します。</div>
+
+      <h2 id="capture">画像キャプチャ</h2>
+      <p>ページをセクションに分割して高解像度の画像として書き出します。左パネル下部の<strong>キャプチャ</strong>エリアから使用します。</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>形式</strong>（JPG / PNG）と<strong>解像度</strong>（1x / 2x / 3x）を選択します。</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>セクション検出</strong>ボタンをクリックします。ページのセクションが自動的に検出されます。</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">検出されたセクションのリストと高さを確認します。不要な場合は<strong>リセット</strong>して再検出します。</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>キャプチャ</strong>ボタンをクリックします。プログレスバーが表示され、完了するとZIPファイルがダウンロードされます。</div></div>
+      </div>
+      <div class="warn">キャプチャは<strong>プレビューモード</strong>でのみ動作します。コードビューの場合は先にプレビューに切り替えてください。</div>
+
+      <h2 id="save">保存</h2>
+      <p>上部の<strong>保存</strong>ボタンまたは<kbd>Ctrl</kbd>+<kbd>S</kbd>を押すと、編集済みHTMLファイルがコンピューターにダウンロードされます。</p>
+      <div class="warn"><strong>自動保存はありません。</strong>重要な変更後は手動で保存してください。ブラウザタブを閉じると未保存の変更が失われます。</div>
+
+      <h2 id="elements">要素の種類</h2>
+      <table>
+        <thead><tr><th>種類</th><th>バッジ</th><th>該当タグ</th><th>編集可能</th></tr></thead>
+        <tbody>
+          <tr><td>テキスト</td><td><span class="badge badge-blue">テキスト</span></td><td><code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1〜6&gt;</code>, <code>&lt;li&gt;</code> など</td><td>✅</td></tr>
+          <tr><td>ボタン</td><td><span class="badge badge-green">ボタン</span></td><td><code>&lt;button&gt;</code>, <code>&lt;a&gt;</code></td><td>✅</td></tr>
+          <tr><td>ボックス</td><td><span class="badge badge-gray">ボックス</span></td><td><code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code> など</td><td>✅</td></tr>
+          <tr><td>画像</td><td><span class="badge badge-purple">画像</span></td><td><code>&lt;img&gt;</code></td><td>✅</td></tr>
+          <tr><td>区切り線</td><td><span class="badge badge-yellow">区切り線</span></td><td><code>&lt;hr&gt;</code></td><td>✅</td></tr>
+          <tr><td>非対応</td><td><span class="badge badge-red">非対応</span></td><td>複雑なインタラクティブ要素</td><td>❌</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="shortcuts">キーボードショートカット</h2>
+      <table>
+        <thead><tr><th>ショートカット</th><th>動作</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td><td>元に戻す</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>やり直し</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>⌘</kbd>+<kbd>S</kbd></td><td>HTMLファイルを保存</td></tr>
+        </tbody>
+      </table>
+      <div class="note">コードビュー（Monacoエディター）がフォーカスされている場合、ショートカットはエディター内部の機能として動作します。エディター外をクリックしてから使用してください。</div>
+    `
+  },
+
+  zh: {
+    pageTitle: 'SoEZ HTML — 使用手册',
+    langLabel: '语言:',
+    sbSubtitle: '使用手册',
+    navG1: '快速入门',
+    navG2: '核心功能',
+    navG3: '高级功能',
+    navG4: '参考',
+    navOverview: '概述',
+    navQuickstart: '快速开始',
+    navLayout: '界面布局',
+    navUpload: '打开文件',
+    navSelect: '选择元素',
+    navEdit: '编辑属性',
+    navViewmode: '视图模式',
+    navClassApply: '批量应用类',
+    navUndo: '撤销／重做',
+    navCapture: '图像截图',
+    navSave: '保存',
+    navElements: '元素类型',
+    navShortcuts: '键盘快捷键',
+    content: `
+      <h1>SoEZ HTML 使用手册<span class="sub">面向非开发者的可视化 HTML 编辑工具</span></h1>
+      <div class="hero">
+        <p>SoEZ HTML 让您无需了解代码即可对 HTML 文件进行可视化编辑。点击元素进行选择，在左侧面板中调整颜色、大小、间距等，修改结果即时反映在预览中。</p>
+      </div>
+
+      <h2 id="overview">概述</h2>
+      <div class="cards">
+        <div class="card"><div class="card-icon">🎯</div><h4>可视化编辑</h4><p>点击元素即可在面板中即时编辑其属性。</p></div>
+        <div class="card"><div class="card-icon">⚡</div><h4>实时预览</h4><p>更改即时反映在预览中。也可切换到代码视图直接编辑。</p></div>
+        <div class="card"><div class="card-icon">↩️</div><h4>撤销／重做</h4><p>最多保留 50 步操作历史，轻松撤销失误。</p></div>
+        <div class="card"><div class="card-icon">📸</div><h4>图像截图</h4><p>自动检测页面区域，导出为高分辨率图像。</p></div>
+      </div>
+
+      <h2 id="quickstart">快速开始</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>打开文件</strong> — 将 <code>.html</code> 文件拖拽到左侧面板的上传区域，或点击选择文件。</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>选择元素</strong> — 在预览中点击要编辑的元素。左侧面板将显示其属性。</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>编辑属性</strong> — 调整颜色、大小、文本等所需属性。更改即时反映在预览中。</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>保存</strong> — 点击顶部<strong>保存</strong>按钮（<kbd>Ctrl</kbd>+<kbd>S</kbd>）下载修改后的 HTML 文件。</div></div>
+      </div>
+
+      <h2 id="layout">界面布局</h2>
+      <div class="layout-diagram">
+        <div class="ld-header"><span><b>顶部工具栏</b> — 文件名 · 撤销 · 重做 · 恢复原始 · 保存 · 语言 · 手册</span></div>
+        <div class="ld-body">
+          <div class="ld-left"><b>左侧面板 (380px)</b>文件上传<br>元素信息<br>属性编辑<br>图像截图</div>
+          <div class="ld-main"><b>右侧面板 (剩余区域)</b>预览 / 代码视图切换<br><br>HTML 渲染预览<br>或 Monaco 代码编辑器</div>
+        </div>
+        <div class="ld-status">底部状态栏 — 显示所选元素的 DOM 路径（例如: body &gt; div &gt; p）</div>
+      </div>
+      <table>
+        <thead><tr><th>区域</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><strong>顶部工具栏</strong></td><td>文件名显示、撤销/重做、恢复原始、保存、语言切换、手册</td></tr>
+          <tr><td><strong>左侧面板</strong></td><td>文件上传、所选元素信息、属性编辑器、图像截图</td></tr>
+          <tr><td><strong>右侧面板</strong></td><td>预览（默认）或代码视图可切换</td></tr>
+          <tr><td><strong>状态栏</strong></td><td>显示当前所选元素的 DOM 路径</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="upload">打开文件</h2>
+      <p>通过左侧面板顶部的上传区域加载文件。</p>
+      <ul>
+        <li><strong>拖拽上传</strong> — 将 <code>.html</code>、<code>.htm</code> 文件拖拽到上传区域。</li>
+        <li><strong>点击浏览</strong> — 点击上传区域或<strong>更改文件</strong>按钮。</li>
+        <li><strong>粘贴</strong> — 将文件复制到剪贴板后粘贴。</li>
+      </ul>
+      <div class="warn">文件大小上限为 <strong>10MB</strong>。在已打开文件时加载新文件，将重置所有编辑内容。</div>
+
+      <h2 id="select">选择元素</h2>
+      <p>在预览中点击要编辑的元素。所选元素将高亮显示，左侧面板显示详细信息。</p>
+      <h3>元素信息面板</h3>
+      <div class="prop-group">
+        <div class="prop-group-header">显示内容</div>
+        <div class="prop-row"><div class="prop-name">标签</div><div class="prop-desc">所选元素的 HTML 标签（例如: <code>&lt;div&gt;</code>）</div></div>
+        <div class="prop-row"><div class="prop-name">类型标签</div><div class="prop-desc">文本 · 按钮 · 容器 · 图片 · 分隔线 · 不支持 之一</div></div>
+        <div class="prop-row"><div class="prop-name">ID</div><div class="prop-desc">元素的 <code>id</code> 属性（以黄色显示）</div></div>
+        <div class="prop-row"><div class="prop-name">类</div><div class="prop-desc">应用的 CSS 类列表（以蓝色显示）</div></div>
+      </div>
+      <h3>元素导航按钮</h3>
+      <ul>
+        <li><strong>▲ 向上箭头</strong> — 将选择移到父元素</li>
+        <li><strong>▼ 向下箭头</strong> — 将选择移到第一个子元素</li>
+      </ul>
+
+      <h2 id="edit">编辑属性</h2>
+      <p>可编辑的属性因所选元素的类型而异。</p>
+
+      <h3>文本元素 (<code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1&gt;</code> 等)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">文本内容</div><div class="prop-desc">直接输入文本进行编辑</div></div>
+        <div class="prop-row"><div class="prop-name">字体大小</div><div class="prop-desc">8〜120px 滑块</div></div>
+        <div class="prop-row"><div class="prop-name">字体</div><div class="prop-desc">字体系列下拉选择</div></div>
+        <div class="prop-row"><div class="prop-name">粗细</div><div class="prop-desc">100〜900（Thin〜Black）</div></div>
+        <div class="prop-row"><div class="prop-name">斜体</div><div class="prop-desc">斜体切换按钮</div></div>
+        <div class="prop-row"><div class="prop-name">字体颜色</div><div class="prop-desc">颜色选择器</div></div>
+        <div class="prop-row"><div class="prop-name">对齐</div><div class="prop-desc">左对齐 / 居中 / 右对齐 / 两端对齐</div></div>
+        <div class="prop-row"><div class="prop-name">行高</div><div class="prop-desc">0.5〜3x 滑块</div></div>
+        <div class="prop-row"><div class="prop-name">字间距</div><div class="prop-desc">-5〜20px 滑块</div></div>
+      </div>
+
+      <h3>按钮元素 (<code>&lt;button&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">文本内容</div><div class="prop-desc">编辑按钮标签</div></div>
+        <div class="prop-row"><div class="prop-name">背景色 / 字体颜色</div><div class="prop-desc">各颜色选择器</div></div>
+        <div class="prop-row"><div class="prop-name">圆角</div><div class="prop-desc">0〜100px（border-radius）</div></div>
+        <div class="prop-row"><div class="prop-name">边框</div><div class="prop-desc">宽度 · 样式 · 颜色</div></div>
+        <div class="prop-row"><div class="prop-name">内边距</div><div class="prop-desc">上/右/下/左各自调整</div></div>
+        <div class="prop-row"><div class="prop-name">字体大小</div><div class="prop-desc">8〜72px</div></div>
+      </div>
+
+      <h3>容器元素 (<code>&lt;div&gt;</code>, <code>&lt;section&gt;</code> 等)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">背景色</div><div class="prop-desc">颜色选择器</div></div>
+        <div class="prop-row"><div class="prop-name">背景图片</div><div class="prop-desc">直接输入图片 URL</div></div>
+        <div class="prop-row"><div class="prop-name">边框</div><div class="prop-desc">宽度 · 样式 · 颜色</div></div>
+        <div class="prop-row"><div class="prop-name">圆角</div><div class="prop-desc">0〜100px</div></div>
+        <div class="prop-row"><div class="prop-name">内边距</div><div class="prop-desc">上/右/下/左</div></div>
+        <div class="prop-row"><div class="prop-name">外边距</div><div class="prop-desc">上/右/下/左</div></div>
+        <div class="prop-row"><div class="prop-name">阴影</div><div class="prop-desc">X · Y 偏移、模糊、扩散、颜色</div></div>
+      </div>
+
+      <h3>图片元素 (<code>&lt;img&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">图片文件</div><div class="prop-desc">通过文件选择按钮替换（以 Data URI 插入）</div></div>
+        <div class="prop-row"><div class="prop-name">宽度 / 高度</div><div class="prop-desc">0〜2000px（含宽高比锁定切换）</div></div>
+        <div class="prop-row"><div class="prop-name">圆角</div><div class="prop-desc">0〜100px</div></div>
+        <div class="prop-row"><div class="prop-name">不透明度</div><div class="prop-desc">0〜1</div></div>
+        <div class="prop-row"><div class="prop-name">填充方式</div><div class="prop-desc">cover / contain / fill / none / scale-down</div></div>
+      </div>
+
+      <h3>分隔线元素 (<code>&lt;hr&gt;</code>)</h3>
+      <div class="prop-group">
+        <div class="prop-row"><div class="prop-name">线条颜色</div><div class="prop-desc">颜色选择器</div></div>
+        <div class="prop-row"><div class="prop-name">线条粗细</div><div class="prop-desc">0〜20px</div></div>
+        <div class="prop-row"><div class="prop-name">线条样式</div><div class="prop-desc">实线 / 虚线 / 点线</div></div>
+        <div class="prop-row"><div class="prop-name">宽度</div><div class="prop-desc">0〜100%</div></div>
+      </div>
+
+      <h2 id="viewmode">视图模式切换</h2>
+      <p>通过右侧面板顶部的<strong>预览 / 代码</strong>按钮切换视图。</p>
+      <table>
+        <thead><tr><th>模式</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><strong>预览</strong></td><td>实际渲染的 HTML 画面。点击元素进行选择和编辑。幻灯片和交互元素也可正常运行。</td></tr>
+          <tr><td><strong>代码</strong></td><td>Monaco 代码编辑器（VS Code 风格）。HTML 语法高亮、自动补全。编辑代码后切换回预览时自动同步。</td></tr>
+        </tbody>
+      </table>
+      <div class="note">在预览中选中元素后切换到代码视图，将自动滚动到该元素所在的代码行并高亮显示。</div>
+
+      <h2 id="class-apply">批量应用类</h2>
+      <p>将属性更改一次性应用到所有具有相同 CSS 类的元素。</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">选择一个具有类的元素。</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">在左侧面板中勾选<strong>"应用到所有相同类的元素"</strong>复选框。</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">从下拉菜单中选择要编辑的类。</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">更改属性后，将同时应用到具有该类的<strong>所有元素</strong>。</div></div>
+      </div>
+
+      <h2 id="undo">撤销 / 重做</h2>
+      <p>通过顶部工具栏或键盘快捷键浏览编辑历史。最多保留 <strong>50 步</strong>历史记录。</p>
+      <table>
+        <thead><tr><th>按钮</th><th>快捷键</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td><strong>撤销</strong></td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>撤销上一次更改。</td></tr>
+          <tr><td><strong>重做</strong></td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> 或 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>重新应用已撤销的更改。</td></tr>
+          <tr><td><strong>恢复原始</strong></td><td>—</td><td>完全恢复到最初打开文件时的状态。</td></tr>
+        </tbody>
+      </table>
+      <div class="note">在幻灯片 HTML 中执行撤销/重做时，视图将自动跳转到被编辑的幻灯片页面。</div>
+
+      <h2 id="capture">图像截图</h2>
+      <p>将页面按区域拆分，导出为高分辨率图像。在左侧面板底部的<strong>截图</strong>区域中使用。</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">选择<strong>格式</strong>（JPG / PNG）和<strong>分辨率</strong>（1x / 2x / 3x）。</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">点击<strong>检测区域</strong>按钮。页面区域将自动检测。</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">查看检测到的区域列表和高度。如不满意，点击<strong>重置</strong>后重新检测。</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">点击<strong>截图</strong>按钮。显示进度条，完成后下载 ZIP 文件。</div></div>
+      </div>
+      <div class="warn">截图仅在<strong>预览模式</strong>下有效。如在代码视图中，请先切换到预览。</div>
+
+      <h2 id="save">保存</h2>
+      <p>点击顶部<strong>保存</strong>按钮或按 <kbd>Ctrl</kbd>+<kbd>S</kbd>，将修改后的 HTML 文件下载到您的计算机。</p>
+      <div class="warn"><strong>没有自动保存功能。</strong>重要更改后请手动保存。关闭浏览器标签页将丢失未保存的更改。</div>
+
+      <h2 id="elements">元素类型参考</h2>
+      <table>
+        <thead><tr><th>类型</th><th>标签</th><th>对应标签</th><th>可编辑</th></tr></thead>
+        <tbody>
+          <tr><td>文本</td><td><span class="badge badge-blue">文本</span></td><td><code>&lt;p&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;h1〜6&gt;</code>, <code>&lt;li&gt;</code> 等</td><td>✅</td></tr>
+          <tr><td>按钮</td><td><span class="badge badge-green">按钮</span></td><td><code>&lt;button&gt;</code>, <code>&lt;a&gt;</code></td><td>✅</td></tr>
+          <tr><td>容器</td><td><span class="badge badge-gray">容器</span></td><td><code>&lt;div&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code> 等</td><td>✅</td></tr>
+          <tr><td>图片</td><td><span class="badge badge-purple">图片</span></td><td><code>&lt;img&gt;</code></td><td>✅</td></tr>
+          <tr><td>分隔线</td><td><span class="badge badge-yellow">分隔线</span></td><td><code>&lt;hr&gt;</code></td><td>✅</td></tr>
+          <tr><td>不支持</td><td><span class="badge badge-red">不支持</span></td><td>复杂交互元素</td><td>❌</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="shortcuts">键盘快捷键</h2>
+      <table>
+        <thead><tr><th>快捷键</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td><td>撤销</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>重做</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>⌘</kbd>+<kbd>S</kbd></td><td>保存 HTML 文件</td></tr>
+        </tbody>
+      </table>
+      <div class="note">代码视图（Monaco 编辑器）获得焦点时，快捷键将作为编辑器内部命令执行。请先点击编辑器外部再使用。</div>
+    `
+  }
+};
+
+(function() {
+  const params = new URLSearchParams(location.search);
+  let lang = params.get('lang') || 'en';
+  if (!TRANSLATIONS[lang]) lang = 'en';
+
+  function apply(l) {
+    const T = TRANSLATIONS[l];
+    document.documentElement.lang = l;
+    document.title = T.pageTitle;
+
+    document.getElementById('lb-lang').textContent = T.langLabel;
+    document.getElementById('sb-subtitle').textContent = T.sbSubtitle;
+    document.getElementById('nav-g1').textContent = T.navG1;
+    document.getElementById('nav-g2').textContent = T.navG2;
+    document.getElementById('nav-g3').textContent = T.navG3;
+    document.getElementById('nav-g4').textContent = T.navG4;
+    document.getElementById('nav-overview').textContent   = T.navOverview;
+    document.getElementById('nav-quickstart').textContent = T.navQuickstart;
+    document.getElementById('nav-layout').textContent     = T.navLayout;
+    document.getElementById('nav-upload').textContent     = T.navUpload;
+    document.getElementById('nav-select').textContent     = T.navSelect;
+    document.getElementById('nav-edit').textContent       = T.navEdit;
+    document.getElementById('nav-viewmode').textContent   = T.navViewmode;
+    document.getElementById('nav-class-apply').textContent = T.navClassApply;
+    document.getElementById('nav-undo').textContent       = T.navUndo;
+    document.getElementById('nav-capture').textContent    = T.navCapture;
+    document.getElementById('nav-save').textContent       = T.navSave;
+    document.getElementById('nav-elements').textContent   = T.navElements;
+    document.getElementById('nav-shortcuts').textContent  = T.navShortcuts;
+    document.getElementById('main-content').innerHTML     = T.content;
+
+    document.querySelectorAll('.lang-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.lang === l);
+    });
+  }
+
+  apply(lang);
+
+  document.querySelectorAll('.lang-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const newLang = btn.dataset.lang;
+      const url = new URL(location.href);
+      url.searchParams.set('lang', newLang);
+      history.replaceState(null, '', url.toString());
+      apply(newLang);
+    });
+  });
+})();
+</script>
 
 </body>
 </html>

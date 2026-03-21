@@ -11,6 +11,7 @@ export const translations = {
     resetTooltip: 'Reset to Original',
     save: 'Save',
     saveTooltip: 'Save (Ctrl+S)',
+    openManual: 'Manual',
 
     // Status bar
     ready: 'Ready',
@@ -139,6 +140,7 @@ export const translations = {
     resetTooltip: '원본으로 복원',
     save: '저장',
     saveTooltip: '저장 (Ctrl+S)',
+    openManual: '사용 설명서',
 
     ready: '준비',
     errorOccurred: '오류가 발생했습니다',
@@ -252,6 +254,7 @@ export const translations = {
     resetTooltip: '元のファイルに戻す',
     save: '保存',
     saveTooltip: '保存 (Ctrl+S)',
+    openManual: 'マニュアル',
 
     ready: '準備完了',
     errorOccurred: 'エラーが発生しました',
@@ -365,6 +368,7 @@ export const translations = {
     resetTooltip: '恢复到原始文件',
     save: '保存',
     saveTooltip: '保存 (Ctrl+S)',
+    openManual: '使用手册',
 
     ready: '就绪',
     errorOccurred: '发生错误',
