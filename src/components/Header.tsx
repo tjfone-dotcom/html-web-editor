@@ -117,9 +117,9 @@ export default function Header() {
           <button
             onClick={() => window.open(`/manual.html?lang=${locale}`, '_blank')}
             title={t('openManual')}
-            className="w-7 h-7 flex items-center justify-center rounded text-base hover:bg-gray-700 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-700 transition-colors"
           >
-            💡
+            <img src="/manual.png" alt="Manual" className="w-5 h-5 object-contain" />
           </button>
         </div>
       </div>
