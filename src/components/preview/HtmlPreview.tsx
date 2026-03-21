@@ -19,7 +19,7 @@ function getNodePath(el: Element, root: Element): number[] {
   const path: number[] = [];
   let cur: Element | null = el;
   while (cur && cur !== root) {
-    const parent = cur.parentElement;
+    const parent: Element | null = cur.parentElement;
     if (!parent) break;
     let idx = 0;
     for (let i = 0; i < parent.children.length; i++) {

@@ -7,10 +7,6 @@ import Slider from '../controls/Slider';
 
 const BORDER_STYLES = ['solid', 'dashed', 'dotted'];
 
-function parsePx(val: string): number {
-  return parseFloat(val) || 0;
-}
-
 function parseBorderColor(val: string): string {
   if (!val || val === 'none') return '#000000';
   const colorMatch = val.match(/(rgb[a]?\([^)]+\))/) || val.match(/(#[0-9a-fA-F]{3,8})/);
