@@ -8,7 +8,7 @@ function getInitialLocale(): SupportedLocale {
     const saved = localStorage.getItem(LOCALE_STORAGE_KEY) as SupportedLocale | null;
     if (saved && ['en', 'ko', 'ja', 'zh'].includes(saved)) return saved;
   } catch { /* ignore */ }
-  return 'ko';
+  return 'en';
 }
 
 const MAX_HISTORY = 50;
