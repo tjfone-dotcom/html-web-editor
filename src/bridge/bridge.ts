@@ -247,7 +247,7 @@ export function getBridgeScript(): string {
     // Reveal.js
     if (window.Reveal && typeof window.Reveal.getIndices === 'function') {
       var idx = window.Reveal.getIndices();
-      var result = { framework: 'reveal', h: idx.h, v: idx.v, f: idx.f !== undefined ? idx.f : -1 };
+      var result = { framework: 'reveal', index: idx.h, h: idx.h, v: idx.v, f: idx.f !== undefined ? idx.f : -1 };
       console.log('[bridge] captureFrameworkSlideIndex:', JSON.stringify(result));
       return result;
     }
@@ -1154,6 +1154,41 @@ export function getBridgeScript(): string {
   }
 
   function detectSlides() {
+    // ── Reveal.js: enumerate horizontal + vertical slides ────────────
+    var isReveal = (typeof window['Reveal'] !== 'undefined') &&
+                   window['Reveal'].isReady && window['Reveal'].isReady();
+    if (isReveal) {
+      var hSections = document.querySelectorAll('.reveal .slides > section');
+      var result = [];
+      var flatIndex = 0;
+      var vw = document.documentElement.clientWidth;
+      var vh = document.documentElement.clientHeight;
+      for (var h = 0; h < hSections.length; h++) {
+        var vSections = hSections[h].querySelectorAll('section');
+        if (vSections.length === 0) {
+          result.push({
+            index: flatIndex++,
+            label: '슬라이드 ' + (h + 1),
+            top: 0, height: vh,
+            selector: '.reveal .slides > section',
+            revealH: h, revealV: 0
+          });
+        } else {
+          for (var v = 0; v < vSections.length; v++) {
+            result.push({
+              index: flatIndex++,
+              label: '슬라이드 ' + (h + 1) + '-' + (v + 1),
+              top: 0, height: vh,
+              selector: '.reveal .slides > section > section',
+              revealH: h, revealV: v
+            });
+          }
+        }
+      }
+      return result;
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     var slides = document.querySelectorAll('.reveal section:not(section section), .slides > section');
     if (slides.length === 0) {
       slides = document.querySelectorAll('[data-slide], .slide, .page, .swiper-slide, .step');
@@ -1430,7 +1465,115 @@ export function getBridgeScript(): string {
     }
   }
 
-  function captureSlideByIsolation(idx, scale, format, quality) {
+  function captureSlideByIsolation(idx, scale, format, quality, revealH, revealV) {
+    // ── Reveal.js 전용 캡처 경로 ─────────────────────────────────────
+    // Reveal.js는 배경(.backgrounds)과 내용(.slides)을 별도 트리로 관리하므로
+    // CSS 격리 방식 대신 Reveal.slide() API로 이동한 뒤 캡처한다.
+    var isReveal = (typeof window['Reveal'] !== 'undefined') &&
+                   window['Reveal'].isReady && window['Reveal'].isReady();
+    if (isReveal) {
+      var h = (revealH !== undefined) ? revealH : idx;
+      var v = (revealV !== undefined) ? revealV : 0;
+
+      // 원래 transition 설정 저장 — 캡처 후 복원에 사용
+      var revealConfig = window['Reveal'].getConfig ? window['Reveal'].getConfig() : {};
+      var origTransition = revealConfig.transition || 'slide';
+      var origBgTransition = revealConfig.backgroundTransition || 'fade';
+
+      // Reveal 내부 transition 비활성화: transitionend 없이 즉시 완료 처리하도록 함
+      if (window['Reveal'].configure) {
+        window['Reveal'].configure({ transition: 'none', backgroundTransition: 'none' });
+      }
+
+      // CSS freeze: html2canvas 품질용 (UI 숨김 + 나머지 애니메이션 제거)
+      var freezeStyleReveal = document.createElement('style');
+      freezeStyleReveal.setAttribute('data-bridge', '');
+      freezeStyleReveal.textContent = [
+        '*, *::before, *::after { transition: none !important; animation: none !important; }',
+        '.reveal .controls, .reveal .progress, .reveal .slide-number, .aria-status { display: none !important; }',
+        '.reveal .backgrounds { z-index: 0 !important; }',
+        '.reveal .slides { z-index: 2 !important; }',
+      ].join('\\n');
+      document.head.appendChild(freezeStyleReveal);
+
+      // 중복 실행 방지 플래그
+      var revealNavDone = false;
+
+      var doRevealCapture = function() {
+        if (revealNavDone) return;
+        revealNavDone = true;
+        // Double rAF: Reveal의 내부 rAF 콜백이 완료된 후 캡처
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+          // Show all fragments in final state
+          // Note: Reveal.lastFragment() is not a public API — manually add .visible
+          var currentSlide = window['Reveal'].getCurrentSlide && window['Reveal'].getCurrentSlide();
+          if (currentSlide) {
+            var frags = currentSlide.querySelectorAll('.fragment');
+            for (var fi = 0; fi < frags.length; fi++) {
+              frags[fi].classList.add('visible');
+              frags[fi].style.opacity = '1';
+              frags[fi].style.visibility = '';
+            }
+          }
+          // null root 방지: null이면 .past 슬라이드까지 스캔해 transform을 제거할 위험이 있음
+          var safeRoot = currentSlide
+            || document.querySelector('.reveal .slides section.present')
+            || document.body;
+          var forceFixed = forceVisibleState(safeRoot);
+          setTimeout(function() {
+            html2canvas(document.body, {
+              scale: scale,
+              useCORS: true,
+              logging: false,
+              x: 0,
+              y: 0,
+              width: document.documentElement.clientWidth,
+              height: document.documentElement.clientHeight,
+              scrollX: 0,
+              scrollY: 0,
+            }).then(function(canvas) {
+              var dataUrl = canvas.toDataURL(format, quality);
+              restoreForceVisible(forceFixed);
+              document.head.removeChild(freezeStyleReveal);
+              if (window['Reveal'].configure) {
+                window['Reveal'].configure({ transition: origTransition, backgroundTransition: origBgTransition });
+              }
+              window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: dataUrl } }, '*');
+            }).catch(function() {
+              restoreForceVisible(forceFixed);
+              document.head.removeChild(freezeStyleReveal);
+              if (window['Reveal'].configure) {
+                window['Reveal'].configure({ transition: origTransition, backgroundTransition: origBgTransition });
+              }
+              window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
+            });
+          }, 300);  // 150 → 300ms: 세로→가로 전환 등 복잡한 네비게이션을 위한 여유 시간
+          }); // inner rAF
+        }); // outer rAF
+      };
+
+      // slidechanged 이벤트를 캡처 트리거로 사용:
+      // Reveal의 공식 "네비게이션 완료" 신호로, .slides transform이 확정된 후 발생.
+      // transition:'none'이면 slide() 내부에서 동기적으로 발생, 비동기여도 올바른 타이밍 보장.
+      var onSlideChanged = function() {
+        window['Reveal'].off('slidechanged', onSlideChanged);
+        doRevealCapture();
+      };
+      window['Reveal'].on('slidechanged', onSlideChanged);
+
+      window['Reveal'].slide(h, v);
+
+      // Fallback: slidechanged가 발생하지 않는 경우 (이미 목표 슬라이드에 있을 때 등)
+      setTimeout(function() {
+        window['Reveal'].off('slidechanged', onSlideChanged);
+        doRevealCapture();
+      }, 600);
+
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     var slides = getSlideElements();
     if (!slides || idx >= slides.length) {
       window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
@@ -1547,6 +1690,8 @@ export function getBridgeScript(): string {
     var scale = payload.scale || 2;
     var format = payload.format || 'image/png';
     var quality = payload.quality || 0.92;
+    var revealH = (payload.revealH !== undefined) ? payload.revealH : idx;
+    var revealV = (payload.revealV !== undefined) ? payload.revealV : 0;
 
     if (typeof html2canvas === 'undefined') {
       window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null, error: 'html2canvas not available' } }, '*');
@@ -1556,7 +1701,7 @@ export function getBridgeScript(): string {
     var pageType = detectPageTypeInIframe();
 
     if (pageType === 'slides') {
-      captureSlideByIsolation(idx, scale, format, quality);
+      captureSlideByIsolation(idx, scale, format, quality, revealH, revealV);
       return;
     }
 

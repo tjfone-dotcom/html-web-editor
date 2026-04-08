@@ -42,18 +42,17 @@ export function requestSectionDetection(
  */
 export function captureSection(
   iframe: HTMLIFrameElement,
-  sectionIndex: number,
+  section: SectionInfo,
   options: CaptureOptions
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     function handler(e: MessageEvent) {
       if (
         e.data?.type === 'SECTION_CAPTURED' &&
-        e.data.payload?.index === sectionIndex
+        e.data.payload?.index === section.index
       ) {
         window.removeEventListener('message', handler);
         if (e.data.payload.dataUrl) {
-          // Convert data URL to blob
           fetch(e.data.payload.dataUrl)
             .then((res) => res.blob())
             .then((blob) => resolve(blob))
@@ -68,16 +67,17 @@ export function captureSection(
       {
         type: 'CAPTURE_SECTION',
         payload: {
-          index: sectionIndex,
+          index: section.index,
           scale: options.scale,
           format: options.format === 'jpeg' ? 'image/jpeg' : 'image/png',
           quality: options.quality ?? 0.92,
+          revealH: section.revealH,
+          revealV: section.revealV,
         },
       },
       '*'
     );
 
-    // Timeout after 30 seconds per section
     setTimeout(() => {
       window.removeEventListener('message', handler);
       resolve(null);
@@ -98,7 +98,7 @@ export async function captureAllSections(
 
   for (let i = 0; i < sections.length; i++) {
     onProgress?.(i + 1, sections.length);
-    const blob = await captureSection(iframe, i, options);
+    const blob = await captureSection(iframe, sections[i], options);
     results.push(blob);
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, type SyntheticEvent } from 'r
 import { useEditorStore } from '../../store/editorStore';
 import { useT } from '../../i18n';
 import { getBridgeScript } from '../../bridge/bridge';
-import { lastCursorLine, findHtmlContextAtLine } from '../../utils/codeSync';
+import { lastCursorLine, findHtmlContextAtLine, findSlideIndexAtLine } from '../../utils/codeSync';
 
 /** Detect slide-deck documents by checking for common slide framework patterns */
 function isSlideDocument(html: string): boolean {
@@ -161,6 +161,9 @@ export default function HtmlPreview() {
         return;
       }
 
+      // Code→Preview transition: let the sync effect (below) handle reload with scroll info
+      if (needsSyncRef.current) return;
+
       // Normal content update: create blob URL
       reloadIframe(htmlContent);
     } else {
@@ -191,8 +194,10 @@ export default function HtmlPreview() {
         const currentHtml = useEditorStore.getState().htmlContent;
         if (currentHtml) {
           if (isSlideDocument(currentHtml)) {
-            // Slide deck: stay on current slide after code edits
-            pendingSlideNavRef.current = slideIndexRef.current;
+            // Slide deck: navigate to slide matching cursor position, or stay on current slide
+            pendingSlideNavRef.current = cursorLine
+              ? findSlideIndexAtLine(currentHtml, cursorLine)
+              : slideIndexRef.current;
             reloadIframe(currentHtml);
           } else if (cursorLine) {
             // Code→preview with cursor: scroll to cursor element after reload
@@ -209,7 +214,14 @@ export default function HtmlPreview() {
         const currentHtml = useEditorStore.getState().htmlContent;
         if (currentHtml && iframeRef.current?.contentWindow) {
           if (isSlideDocument(currentHtml)) {
-            // Slide deck without edits: stay on current slide (no navigation needed)
+            // Slide deck without edits: navigate to slide matching cursor position
+            const targetSlide = findSlideIndexAtLine(currentHtml, cursorLine);
+            if (targetSlide !== slideIndexRef.current) {
+              iframeRef.current.contentWindow.postMessage({
+                type: 'NAVIGATE_TO_SLIDE',
+                payload: { index: targetSlide },
+              }, '*');
+            }
           } else {
             const ctx = findHtmlContextAtLine(currentHtml, cursorLine);
             if (ctx) {

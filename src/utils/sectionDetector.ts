@@ -10,6 +10,8 @@ export interface SectionInfo {
   top: number;
   height: number;
   selector: string;
+  revealH?: number; // Reveal.js horizontal index
+  revealV?: number; // Reveal.js vertical index
 }
 
 /**
