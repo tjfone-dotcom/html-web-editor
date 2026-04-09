@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type SyntheticEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, type SyntheticEvent } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { useT } from '../../i18n';
 import { getBridgeScript } from '../../bridge/bridge';
@@ -38,8 +38,11 @@ export default function HtmlPreview() {
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
   const isUndoRedo = useEditorStore((s) => s.isUndoRedo);
   const viewMode = useEditorStore((s) => s.viewMode);
+  const fixedViewport = useEditorStore((s) => s.fixedViewport);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isIframeLoading, setIsIframeLoading] = useState(false);
+  const [scaleFactor, setScaleFactor] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
   const prevBlobUrlRef = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Flag to prevent re-injection when we receive DOM_UPDATED from iframe
@@ -297,6 +300,35 @@ export default function HtmlPreview() {
     return () => window.removeEventListener('bridge-navigate', handleBridgeNavigate);
   }, []);
 
+  /** Measure container and return the scale factor to fit 1280×720 inside it */
+  const measureScaleFactor = useCallback((): number => {
+    if (!containerRef.current) return 1;
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    const w = width - 32; // p-4 padding (16px each side)
+    const h = height - 32;
+    if (w <= 0 || h <= 0) return 1;
+    return Math.min(w / 1280, h / 720);
+  }, []);
+
+  // Fixed viewport: compute scale factor on mount, toggle, and resize
+  // `hasContent` ensures re-run when container first appears in the DOM
+  const hasContent = blobUrl !== null;
+  useLayoutEffect(() => {
+    if (!fixedViewport || !containerRef.current) {
+      if (!fixedViewport) setScaleFactor(1);
+      return;
+    }
+
+    // Synchronous initial compute (before paint → no flash at unscaled 1280×720)
+    setScaleFactor(measureScaleFactor());
+
+    // Async observer for subsequent window/container resizes
+    const el = containerRef.current;
+    const observer = new ResizeObserver(() => setScaleFactor(measureScaleFactor()));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fixedViewport, hasContent, measureScaleFactor]);
+
   const handleIframeLoad = useCallback((_e: SyntheticEvent<HTMLIFrameElement>) => {
     setIsIframeLoading(false);
 
@@ -344,7 +376,7 @@ export default function HtmlPreview() {
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 relative">
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center p-4 relative overflow-hidden">
       {isIframeLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
           <div className="flex flex-col items-center gap-2">
@@ -353,24 +385,49 @@ export default function HtmlPreview() {
           </div>
         </div>
       )}
-      <div
-        className="bg-white shadow-lg"
-        style={{
-          aspectRatio: '16 / 9',
-          maxWidth: '100%',
-          maxHeight: '100%',
-          width: '100%',
-        }}
-      >
-        <iframe
-          ref={iframeRef}
-          src={blobUrl}
-          sandbox="allow-scripts allow-same-origin"
-          title={t('htmlPreview')}
-          className="w-full h-full border-0"
-          onLoad={handleIframeLoad}
-        />
-      </div>
+      {fixedViewport ? (
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-lg"
+          style={{
+            width: 1280 * scaleFactor,
+            height: 720 * scaleFactor,
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            src={blobUrl}
+            sandbox="allow-scripts allow-same-origin"
+            title={t('htmlPreview')}
+            style={{
+              width: 1280,
+              height: 720,
+              border: 'none',
+              transform: `scale(${scaleFactor})`,
+              transformOrigin: 'top left',
+            }}
+            onLoad={handleIframeLoad}
+          />
+        </div>
+      ) : (
+        <div
+          className="bg-white shadow-lg"
+          style={{
+            aspectRatio: '16 / 9',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            width: '100%',
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            src={blobUrl}
+            sandbox="allow-scripts allow-same-origin"
+            title={t('htmlPreview')}
+            className="w-full h-full border-0"
+            onLoad={handleIframeLoad}
+          />
+        </div>
+      )}
     </div>
   );
 }

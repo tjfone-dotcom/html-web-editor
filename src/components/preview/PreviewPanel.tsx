@@ -13,6 +13,8 @@ export default function PreviewPanel() {
   const setHtmlContent = useEditorStore((s) => s.setHtmlContent);
   const setFileName = useEditorStore((s) => s.setFileName);
   const setIsLoading = useEditorStore((s) => s.setIsLoading);
+  const fixedViewport = useEditorStore((s) => s.fixedViewport);
+  const setFixedViewport = useEditorStore((s) => s.setFixedViewport);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = useCallback(
@@ -88,7 +90,18 @@ export default function PreviewPanel() {
     <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white shrink-0">
         <span className="text-xs text-gray-500 truncate mr-4">{fileName}</span>
-        <ViewToggle />
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={fixedViewport}
+              onChange={(e) => setFixedViewport(e.target.checked)}
+              className="w-3.5 h-3.5 rounded"
+            />
+            {t('fixedViewport')}
+          </label>
+          <ViewToggle />
+        </div>
       </div>
       <div className={`flex-1 overflow-hidden ${viewMode === 'preview' ? '' : 'hidden'}`}>
         <HtmlPreview />

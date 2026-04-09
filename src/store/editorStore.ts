@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { EditorState, CaptureSettings, SelectedElement, ViewMode, SupportedLocale } from '../types/editor';
 
 const LOCALE_STORAGE_KEY = 'soez-html-locale';
+const VIEWPORT_STORAGE_KEY = 'soez-html-fixed-viewport';
 
 function getInitialLocale(): SupportedLocale {
   try {
@@ -38,6 +39,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   currentSlideIndex: 0,
   undoRedoSlideIndex: null,
   locale: getInitialLocale(),
+  fixedViewport: (() => {
+    try { return localStorage.getItem(VIEWPORT_STORAGE_KEY) !== 'false'; } catch { return true; }
+  })(),
 
   // Actions
   setFileName: (name: string | null) => set({ fileName: name }),
@@ -188,5 +192,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setLocale: (locale: SupportedLocale) => {
     try { localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch { /* ignore */ }
     set({ locale });
+  },
+
+  setFixedViewport: (fixed: boolean) => {
+    try { localStorage.setItem(VIEWPORT_STORAGE_KEY, String(fixed)); } catch { /* ignore */ }
+    set({ fixedViewport: fixed });
   },
 }));

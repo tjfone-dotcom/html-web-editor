@@ -115,6 +115,8 @@ export interface EditorState {
   undoRedoSlideIndex: number | null;
   /** Current UI language */
   locale: SupportedLocale;
+  /** Whether to use fixed 1280×720 viewport (true) or responsive (false) */
+  fixedViewport: boolean;
 
   // Actions
   setFileName: (name: string | null) => void;
@@ -135,4 +137,5 @@ export interface EditorState {
   resetEditor: () => void;
   loadFile: (content: string, fileName: string) => void;
   setLocale: (locale: SupportedLocale) => void;
+  setFixedViewport: (fixed: boolean) => void;
 }

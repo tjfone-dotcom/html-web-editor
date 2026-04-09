@@ -129,6 +129,7 @@ export const translations = {
     setAllEqual: 'Set all sides equally',
     linked: 'Linked',
     individual: 'Individual',
+    fixedViewport: 'Fixed viewport (1280×720)',
   },
 
   ko: {
@@ -243,6 +244,7 @@ export const translations = {
     setAllEqual: '모든 방향 동일하게 설정',
     linked: '연결됨',
     individual: '개별',
+    fixedViewport: '고정 뷰포트 (1280×720)',
   },
 
   ja: {
@@ -357,6 +359,7 @@ export const translations = {
     setAllEqual: 'すべての方向を同じに設定',
     linked: 'リンク済み',
     individual: '個別',
+    fixedViewport: '固定ビューポート (1280×720)',
   },
 
   zh: {
@@ -471,5 +474,6 @@ export const translations = {
     setAllEqual: '统一设置所有方向',
     linked: '已链接',
     individual: '单独',
+    fixedViewport: '固定视口 (1280×720)',
   },
 } as const;
