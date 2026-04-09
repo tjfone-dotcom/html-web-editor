@@ -1707,6 +1707,14 @@ export function getBridgeScript(): string {
 
     // Scroll page: scroll to section first to trigger scroll-based animations,
     // then capture after animations have settled.
+
+    // Hide scrollbar before detection so layout matches html2canvas clone
+    // (scrollbar reduces clientWidth by ~17px, causing aspect-ratio sections to be shorter)
+    var scrollbarFix = document.createElement('style');
+    scrollbarFix.setAttribute('data-bridge-scrollbar-fix', '');
+    scrollbarFix.textContent = 'html { overflow: hidden !important; }';
+    document.head.appendChild(scrollbarFix);
+
     var sections = detectSectionsInIframe();
     if (idx >= sections.length) {
       window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
@@ -1765,6 +1773,7 @@ export function getBridgeScript(): string {
       var savedSecMinHeight = null;
 
       function restoreAfterCapture(clipTextFixed, filterFixed, forceFixed) {
+        if (scrollbarFix.parentNode) scrollbarFix.parentNode.removeChild(scrollbarFix);
         if (fixStyle.parentNode) fixStyle.parentNode.removeChild(fixStyle);
         if (sectionEl) {
           sectionEl.style.height = savedSecHeight;
@@ -1801,6 +1810,10 @@ export function getBridgeScript(): string {
         var forceFixed = forceVisibleState(null);
         var clipTextFixed = fixClipTextForCapture();
         var filterFixed = fixFilterForCapture();
+
+        // Scroll to 0 before capture so actual scroll matches scrollY:0 parameter
+        window.scrollTo(0, 0);
+        if (savedContainer) savedContainer.scrollTop = 0;
 
         html2canvas(document.body, {
           scale: scale,
