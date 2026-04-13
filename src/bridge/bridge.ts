@@ -1142,13 +1142,19 @@ export function getBridgeScript(): string {
       if (ch.nodeType === 1 && !isBridgeOrMeta(ch)) children.push(ch);
     }
     if (children.length > 1) {
-      var fullHeightCount = 0;
-      for (var i = 0; i < children.length; i++) {
-        var cs = window.getComputedStyle(children[i]);
-        var h = parseFloat(cs.height);
-        if (Math.abs(h - window.innerHeight) < 10) fullHeightCount++;
+      // 스크롤 가능한 페이지는 슬라이드로 분류하지 않음.
+      // 진짜 슬라이드 데크(Swiper, Impress 등)는 슬라이드가 오버레이되어 scrollHeight ≈ viewport.
+      // 스크롤 페이지는 scrollHeight >> viewport.
+      var scrollableRatio = document.body.scrollHeight / window.innerHeight;
+      if (scrollableRatio <= 1.5) {
+        var fullHeightCount = 0;
+        for (var i = 0; i < children.length; i++) {
+          var cs = window.getComputedStyle(children[i]);
+          var h = parseFloat(cs.height);
+          if (Math.abs(h - window.innerHeight) < 10) fullHeightCount++;
+        }
+        if (fullHeightCount >= children.length * 0.8) return 'slides';
       }
-      if (fullHeightCount >= children.length * 0.8) return 'slides';
     }
     return 'scroll';
   }
@@ -1190,8 +1196,10 @@ export function getBridgeScript(): string {
     // ─────────────────────────────────────────────────────────────────
 
     var slides = document.querySelectorAll('.reveal section:not(section section), .slides > section');
+    var isFrameworkSlide = slides.length > 0;
     if (slides.length === 0) {
       slides = document.querySelectorAll('[data-slide], .slide, .page, .swiper-slide:not(.swiper-slide-duplicate), .step');
+      isFrameworkSlide = slides.length > 0;
     }
     if (slides.length === 0) {
       var children = [];
@@ -1201,21 +1209,28 @@ export function getBridgeScript(): string {
       }
       slides = children;
     }
-    // Slide framework의 슬라이드들은 전부 뷰포트 전체를 차지하는 오버레이 구조.
-    // Swiper의 wrapper translate3d, coverflow rotateY/scale 등이 getBoundingClientRect에
-    // 섞여 들어오면 슬라이드마다 제각각인 px가 나오므로, Reveal.js 분기와 동일하게
-    // 모든 슬라이드를 top=0, height=viewport로 통일한다.
+
     var vw2 = document.documentElement.clientWidth;
     var vh2 = document.documentElement.clientHeight;
     var result = [];
-    for (var i = 0; i < slides.length; i++) {
-      result.push({
-        index: i,
-        label: '슬라이드 ' + (i + 1),
-        top: 0,
-        height: vh2,
-        width: vw2
-      });
+
+    if (isFrameworkSlide) {
+      // 슬라이드 프레임워크: Swiper wrapper translate3d, coverflow rotateY/scale 등이
+      // getBoundingClientRect에 영향을 주므로 viewport 크기로 통일한다.
+      for (var i = 0; i < slides.length; i++) {
+        result.push({ index: i, label: '슬라이드 ' + (i + 1), top: 0, height: vh2, width: vw2 });
+      }
+    } else {
+      // body children fallback: 프레임워크 셀렉터에 매칭되지 않은 일반 elements.
+      // 실제 element height를 사용한다.
+      for (var i = 0; i < slides.length; i++) {
+        var el = slides[i];
+        var rect = el.getBoundingClientRect();
+        result.push({
+          index: i, label: '슬라이드 ' + (i + 1),
+          top: rect.top + window.scrollY, height: rect.height
+        });
+      }
     }
     return result;
   }
