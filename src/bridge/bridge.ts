@@ -440,7 +440,7 @@ export function getBridgeScript(): string {
       return '.reveal section:not(section section)';
     if (document.querySelectorAll('.slides > section').length > 1)
       return '.slides > section';
-    var selectors = ['.slide', '.page', '.swiper-slide', '[data-slide]', '.step'];
+    var selectors = ['.slide', '.page', '.swiper-slide:not(.swiper-slide-duplicate)', '[data-slide]', '.step'];
     for (var si = 0; si < selectors.length; si++) {
       if (document.querySelectorAll(selectors[si]).length > 1) return selectors[si];
     }
@@ -1191,7 +1191,7 @@ export function getBridgeScript(): string {
 
     var slides = document.querySelectorAll('.reveal section:not(section section), .slides > section');
     if (slides.length === 0) {
-      slides = document.querySelectorAll('[data-slide], .slide, .page, .swiper-slide, .step');
+      slides = document.querySelectorAll('[data-slide], .slide, .page, .swiper-slide:not(.swiper-slide-duplicate), .step');
     }
     if (slides.length === 0) {
       var children = [];
@@ -1201,15 +1201,20 @@ export function getBridgeScript(): string {
       }
       slides = children;
     }
+    // Slide framework의 슬라이드들은 전부 뷰포트 전체를 차지하는 오버레이 구조.
+    // Swiper의 wrapper translate3d, coverflow rotateY/scale 등이 getBoundingClientRect에
+    // 섞여 들어오면 슬라이드마다 제각각인 px가 나오므로, Reveal.js 분기와 동일하게
+    // 모든 슬라이드를 top=0, height=viewport로 통일한다.
+    var vw2 = document.documentElement.clientWidth;
+    var vh2 = document.documentElement.clientHeight;
     var result = [];
     for (var i = 0; i < slides.length; i++) {
-      var el = slides[i];
-      var rect = el.getBoundingClientRect();
       result.push({
         index: i,
         label: '슬라이드 ' + (i + 1),
-        top: rect.top + window.scrollY,
-        height: rect.height
+        top: 0,
+        height: vh2,
+        width: vw2
       });
     }
     return result;
@@ -1574,6 +1579,86 @@ export function getBridgeScript(): string {
     }
     // ─────────────────────────────────────────────────────────────────
 
+    // ── Swiper 전용 캡처 경로 ────────────────────────────────────────
+    // Swiper는 .swiper-wrapper에 translate3d(-Xpx,0,0)를 걸어 슬라이드를 좌우로 이동시키고,
+    // coverflow/cube 같은 effect는 개별 슬라이드에 rotateY/scale을 추가로 적용한다.
+    // 단순히 슬라이드 인라인 transform을 none으로 덮는 방식으로는 wrapper transform이 살아있어
+    // 활성 슬라이드가 음의 X좌표로 밀려 뷰포트 바깥에 놓이므로, Swiper API로 실제 네비게이션한 뒤
+    // wrapper/slide transform을 CSS로 리셋하고 캡처한다.
+    var swiperEl = document.querySelector('.swiper, .swiper-container');
+    var swiperInst = swiperEl && swiperEl.swiper;
+    if (swiperInst && typeof swiperInst.slideTo === 'function') {
+      var origSpeed = swiperInst.params.speed;
+      var isLoop = !!swiperInst.params.loop;
+
+      // Transition 제거 (네비게이션이 즉시 반영되도록)
+      swiperInst.params.speed = 0;
+
+      var swiperFreezeStyle = document.createElement('style');
+      swiperFreezeStyle.setAttribute('data-bridge', '');
+      swiperFreezeStyle.textContent = [
+        '*, *::before, *::after { transition: none !important; animation: none !important; }',
+        '.swiper-button-next, .swiper-button-prev, .swiper-pagination, .swiper-scrollbar { display: none !important; }',
+        // coverflow/cube 등 effect로 인한 개별 슬라이드 3D 변환 제거
+        '.swiper-slide { transform: none !important; }',
+        // wrapper 좌우 이동 제거 → 활성 슬라이드가 (0,0)에 위치
+        '.swiper-wrapper { transform: none !important; }',
+        // 비활성 슬라이드 숨김 (active + duplicate-active 모두 남김)
+        '.swiper-slide { visibility: hidden !important; }',
+        '.swiper-slide-active, .swiper-slide-duplicate-active { visibility: visible !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; }',
+      ].join('\\n');
+      document.head.appendChild(swiperFreezeStyle);
+
+      // 대상 슬라이드로 네비게이션 (loop이면 slideToLoop으로 realIndex 기준 이동)
+      if (isLoop && typeof swiperInst.slideToLoop === 'function') {
+        swiperInst.slideToLoop(idx, 0);
+      } else {
+        swiperInst.slideTo(idx, 0);
+      }
+
+      // Swiper가 wrapper transform / active class를 적용할 시간 확보 (rAF ×2 + 100ms)
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          setTimeout(function() {
+            var forceFixed = forceVisibleState(null);
+            var clipTextFixed = fixClipTextForCapture();
+            var filterFixed = fixFilterForCapture();
+
+            function restoreSwiper() {
+              restoreForceVisible(forceFixed);
+              restoreClipText(clipTextFixed);
+              restoreFilter(filterFixed);
+              if (swiperFreezeStyle.parentNode) swiperFreezeStyle.parentNode.removeChild(swiperFreezeStyle);
+              swiperInst.params.speed = origSpeed;
+              // origIndex 복원은 생략 — Reveal.js 경로와 동일하게 마지막 슬라이드에 머묾
+            }
+
+            html2canvas(document.body, {
+              scale: scale,
+              useCORS: true,
+              logging: false,
+              x: 0,
+              y: 0,
+              width: document.documentElement.clientWidth,
+              height: document.documentElement.clientHeight,
+              scrollX: 0,
+              scrollY: 0,
+            }).then(function(canvas) {
+              restoreSwiper();
+              var dataUrl = canvas.toDataURL(format, quality);
+              window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: dataUrl } }, '*');
+            }).catch(function(err) {
+              restoreSwiper();
+              window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null, error: err.message } }, '*');
+            });
+          }, 100);
+        });
+      });
+
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     var slides = getSlideElements();
     if (!slides || idx >= slides.length) {
       window.parent.postMessage({ type: 'SECTION_CAPTURED', payload: { index: idx, dataUrl: null } }, '*');
@@ -1836,6 +1921,65 @@ export function getBridgeScript(): string {
       });
     }, 300);
   }
+  // --- Stop framework autoplay during editing ---
+  // Rationale: user's original <script> tags are never modified by the editor,
+  // so the saved HTML naturally retains the autoplay config. When the saved file
+  // is opened standalone, the framework re-initializes with autoplay enabled.
+  // This bridge only pauses the running instance for a better editing experience.
+  var _autoplayStopped = { swiper: false, slick: false, reveal: false };
+
+  function stopFrameworkAutoplay() {
+    // Swiper — iterate all container instances (class .swiper or .swiper-container)
+    if (!_autoplayStopped.swiper) {
+      try {
+        var swiperEls = document.querySelectorAll('.swiper, .swiper-container');
+        var anyStopped = false;
+        for (var i = 0; i < swiperEls.length; i++) {
+          var sw = swiperEls[i].swiper;
+          if (sw && sw.autoplay && typeof sw.autoplay.stop === 'function') {
+            try { sw.autoplay.stop(); anyStopped = true; } catch(e) {}
+          }
+        }
+        if (anyStopped || swiperEls.length === 0) _autoplayStopped.swiper = true;
+      } catch(e) { /* ignore */ }
+    }
+
+    // Slick (jQuery plugin) — pause running autoplay
+    if (!_autoplayStopped.slick) {
+      try {
+        var jq = window.jQuery || window.$;
+        if (jq) {
+          var slickEl = jq('.slick-initialized');
+          if (slickEl && slickEl.length > 0) {
+            try { slickEl.slick('slickPause'); _autoplayStopped.slick = true; } catch(e) {}
+          }
+        }
+      } catch(e) { /* ignore */ }
+    }
+
+    // Reveal.js — disable autoSlide via runtime configure
+    if (!_autoplayStopped.reveal) {
+      try {
+        if (window.Reveal && typeof window.Reveal.configure === 'function' &&
+            typeof window.Reveal.isReady === 'function' && window.Reveal.isReady()) {
+          window.Reveal.configure({ autoSlide: 0 });
+          _autoplayStopped.reveal = true;
+        }
+      } catch(e) { /* ignore */ }
+    }
+  }
+
+  // Run immediately, then retry for frameworks that initialize asynchronously
+  // (e.g. Slick via $(function(){}), Reveal.js via its own ready event)
+  stopFrameworkAutoplay();
+  var _autoplayAttempts = 0;
+  var _autoplayInterval = setInterval(function() {
+    _autoplayAttempts++;
+    stopFrameworkAutoplay();
+    // Stop polling after 3 seconds (15 * 200ms)
+    if (_autoplayAttempts >= 15) clearInterval(_autoplayInterval);
+  }, 200);
+
   // --- Slide index tracking: report current slide index to parent ---
   var _slideSelector = getSlideSelector();
   if (_slideSelector) {
